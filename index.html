@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burnham Tennis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="authContainer" class="container">
+        <div class="card">
+            <h1>Burnham Tennis</h1>
+            
+            <div id="loginForm">
+                <h2>Login</h2>
+                <input type="email" id="loginEmail" placeholder="Email">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button onclick="login()" class="btn-primary">Login</button>
+                <p class="link" onclick="showRegister()">New user? Register here</p>
+            </div>
+
+            <div id="registerForm" style="display: none;">
+                <h2>Register</h2>
+                <input type="text" id="regFirstName" placeholder="First Name">
+                <input type="text" id="regLastName" placeholder="Last Name">
+                <input type="email" id="regEmail" placeholder="Email">
+                <input type="tel" id="regPhone" placeholder="Phone Number">
+                <input type="password" id="regPassword" placeholder="Password (min 6 characters)">
+                <button onclick="register()" class="btn-primary">Register</button>
+                <p class="link" onclick="showLogin()">Already have an account? Login</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appContainer" style="display: none;">
+        <nav class="bottom-nav">
+            <button onclick="showGames()" id="navGames">
+                <span>📋</span><span>Games</span>
+            </button>
+            <button onclick="showMyGames()" id="navMyGames">
+                <span>👤</span><span>My Games</span>
+            </button>
+            <button onclick="showArrange()" id="navArrange">
+                <span>➕</span><span>Arrange</span>
+            </button>
+            <button onclick="showAdmin()" id="navAdmin" style="display:none;">
+                <span>⚙️</span><span>Admin</span>
+            </button>
+        </nav>
+
+        <!-- Views will go here -->
+        <div id="gamesView" class="view">
+            <div class="header">
+                <h1>Upcoming Games</h1>
+                <button onclick="logout()" class="btn-secondary">Logout</button>
+            </div>
+            <div id="gamesList"></div>
+        </div>
+
+        <div id="myGamesView" class="view" style="display:none;">
+            <div class="header">
+                <h1>My Games</h1>
+                <button onclick="logout()" class="btn-secondary">Logout</button>
+            </div>
+            <div id="myGamesList"></div>
+        </div>
+
+        <div id="arrangeView" class="view" style="display:none;">
+            <div class="header">
+                <h1>Arrange Game</h1>
+                <button onclick="logout()" class="btn-secondary">Logout</button>
+            </div>
+            <div class="card">
+                <label>Date:</label>
+                <input type="date" id="gameDate">
+                <label>Time:</label>
+                <select id="gameTime">
+                    <option value="">Select time...</option>
+                    <option value="8am-9am">8am - 9am</option>
+                    <option value="9am-10am">9am - 10am</option>
+                    <option value="10am-11am">10am - 11am</option>
+                    <option value="11am-12pm">11am - 12pm</option>
+                    <option value="12pm-1pm">12pm - 1pm</option>
+                    <option value="1pm-2pm">1pm - 2pm</option>
+                    <option value="2pm-3pm">2pm - 3pm</option>
+                    <option value="3pm-4pm">3pm - 4pm</option>
+                    <option value="4pm-5pm">4pm - 5pm</option>
+                    <option value="5pm-6pm">5pm - 6pm</option>
+                </select>
+                <button onclick="createGame()" class="btn-primary">Create Game</button>
+            </div>
+        </div>
+
+        <div id="adminView" class="view" style="display:none;">
+            <div class="header">
+                <h1>Admin Panel</h1>
+                <button onclick="logout()" class="btn-secondary">Logout</button>
+            </div>
+            <div class="card">
+                <h2>Approved Players</h2>
+                <div id="approvedPlayersList"></div>
+                <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
+            </div>
+            <div id="addPlayerForm" class="card" style="display:none;">
+                <h3>Add Player</h3>
+                <input type="text" id="adminFirstName" placeholder="First Name">
+                <input type="text" id="adminLastName" placeholder="Last Name">
+                <input type="email" id="adminEmail" placeholder="Email">
+                <button onclick="addApprovedPlayer()" class="btn-primary">Add</button>
+                <button onclick="hideAddPlayer()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <script>
+console.log('JavaScript is working!');
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
