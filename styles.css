@@ -390,3 +390,74 @@ label {
     font-weight: 600;
     margin: 8px 0;
 }
+.message-board {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.message-board h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.message-item {
+    background: white;
+    border-left: 4px solid #2196f3;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.message-title {
+    font-weight: 600;
+    color: #1976d2;
+    margin-bottom: 4px;
+}
+
+.message-content {
+    color: #555;
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.message-date {
+    font-size: 0.75em;
+    color: #999;
+}
+
+.message-delete {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.message-delete:hover {
+    background: #d32f2f;
+}
+
+.no-messages {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1em;
+    margin: 8px 0;
+    resize: vertical;
+}

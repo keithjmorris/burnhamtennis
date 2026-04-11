@@ -1,7 +1,7 @@
 // Firebase Configuration
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAzg6XcQ0CZnpzAc1uK07rIgDtDYHJbvK8",
@@ -18,6 +18,7 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentUserData = null;
+let allUsers = {}; // Cache for user data
 
 // Level display names
 const levelNames = {
@@ -29,18 +30,35 @@ const levelNames = {
     'team': 'Team'
 };
 
+// Auth state observer
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
         await loadUserData();
+        await cacheAllUsers();
         showApp();
         loadGames();
     } else {
         currentUser = null;
         currentUserData = null;
+        allUsers = {};
         showAuth();
     }
 });
+
+// Cache all users for quick lookup
+async function cacheAllUsers() {
+    try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        usersSnapshot.forEach((doc) => {
+            const userData = doc.data();
+            allUsers[userData.uid] = userData;
+        });
+        console.log('Cached', Object.keys(allUsers).length, 'users');
+    } catch (error) {
+        console.error('Error caching users:', error);
+    }
+}
 
 function showAuth() {
     document.getElementById('authContainer').style.display = 'block';
@@ -128,18 +146,23 @@ window.logout = async () => {
 };
 
 async function loadUserData() {
-    const userQuery = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
-    const userSnapshot = await getDocs(userQuery);
-    
-    if (!userSnapshot.empty) {
-        currentUserData = { id: userSnapshot.docs[0].id, ...userSnapshot.docs[0].data() };
+    try {
+        const userQuery = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
+        const userSnapshot = await getDocs(userQuery);
         
-        const adminQuery = query(collection(db, 'admins'), where('email', '==', currentUser.email));
-        const adminSnapshot = await getDocs(adminQuery);
-        
-        if (!adminSnapshot.empty) {
-            document.getElementById('navAdmin').style.display = 'flex';
+        if (!userSnapshot.empty) {
+            currentUserData = { id: userSnapshot.docs[0].id, ...userSnapshot.docs[0].data() };
+            
+            const adminQuery = query(collection(db, 'admins'), where('email', '==', currentUser.email));
+            const adminSnapshot = await getDocs(adminQuery);
+            
+            if (!adminSnapshot.empty) {
+                const adminTab = document.getElementById('navAdmin');
+                if (adminTab) adminTab.style.display = 'flex';
+            }
         }
+    } catch (error) {
+        console.error('Error loading user data:', error);
     }
 }
 
@@ -148,6 +171,7 @@ window.showGames = () => {
     document.getElementById('gamesView').style.display = 'block';
     setActiveNav('navGames');
     loadGames();
+    if (window.loadMessages) window.loadMessages();
 };
 
 window.showMyGames = () => {
@@ -168,6 +192,7 @@ window.showAdmin = () => {
     document.getElementById('adminView').style.display = 'block';
     setActiveNav('navAdmin');
     loadApprovedPlayers();
+    if (window.loadAdminMessages) window.loadAdminMessages();
 };
 
 function hideAllViews() {
@@ -176,65 +201,95 @@ function hideAllViews() {
 
 function setActiveNav(activeId) {
     document.querySelectorAll('.bottom-nav button').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(activeId).classList.add('active');
+    const activeBtn = document.getElementById(activeId);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
 async function loadGames() {
-    const gamesQuery = query(collection(db, 'games'), orderBy('date', 'asc'));
-    const gamesSnapshot = await getDocs(gamesQuery);
-    
-    const gamesList = document.getElementById('gamesList');
-    gamesList.innerHTML = '';
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    for (const gameDoc of gamesSnapshot.docs) {
-        const game = { id: gameDoc.id, ...gameDoc.data() };
-        const gameDate = new Date(game.date);
+    try {
+        const gamesSnapshot = await getDocs(collection(db, 'games'));
         
-        if (gameDate >= today) {
-            const card = await createGameCard(game, false);
+        const gamesList = document.getElementById('gamesList');
+        if (!gamesList) return;
+        
+        gamesList.innerHTML = '';
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const futureGames = [];
+        
+        gamesSnapshot.forEach((gameDoc) => {
+            const game = { id: gameDoc.id, ...gameDoc.data() };
+            if (!game.date) return;
+            
+            const gameDate = new Date(game.date);
+            if (gameDate >= today) {
+                futureGames.push(game);
+            }
+        });
+        
+        futureGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        for (const game of futureGames) {
+            const card = createGameCard(game, false);
             gamesList.appendChild(card);
         }
-    }
-    
-    if (gamesList.children.length === 0) {
-        gamesList.innerHTML = '<p class="empty-state">No upcoming games</p>';
+        
+        if (gamesList.children.length === 0) {
+            gamesList.innerHTML = '<p class="empty-state">No upcoming games</p>';
+        }
+    } catch (error) {
+        console.error('Error loading games:', error);
     }
 }
 
 async function loadMyGames() {
     if (!currentUserData) return;
     
-    const gamesQuery = query(collection(db, 'games'), orderBy('date', 'asc'));
-    const gamesSnapshot = await getDocs(gamesQuery);
-    
-    const myGamesList = document.getElementById('myGamesList');
-    myGamesList.innerHTML = '';
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    for (const gameDoc of gamesSnapshot.docs) {
-        const game = { id: gameDoc.id, ...gameDoc.data() };
-        const gameDate = new Date(game.date);
+    try {
+        const gamesSnapshot = await getDocs(collection(db, 'games'));
         
-        const allPlayers = [...(game.players || []), ...(game.reserves || [])];
-        const userInGame = allPlayers.some(p => p.uid === currentUserData.uid);
+        const myGamesList = document.getElementById('myGamesList');
+        if (!myGamesList) return;
         
-        if (gameDate >= today && userInGame) {
-            const card = await createGameCard(game, true);
+        myGamesList.innerHTML = '';
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const myFutureGames = [];
+        
+        gamesSnapshot.forEach((gameDoc) => {
+            const game = { id: gameDoc.id, ...gameDoc.data() };
+            if (!game.date) return;
+            
+            const gameDate = new Date(game.date);
+            
+            const allPlayers = [...(game.players || []), ...(game.reserves || [])];
+            const userInGame = allPlayers.some(p => p.uid === currentUserData.uid);
+            
+            if (gameDate >= today && userInGame) {
+                myFutureGames.push(game);
+            }
+        });
+        
+        myFutureGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        for (const game of myFutureGames) {
+            const card = createGameCard(game, true);
             myGamesList.appendChild(card);
         }
-    }
-    
-    if (myGamesList.children.length === 0) {
-        myGamesList.innerHTML = '<p class="empty-state">You haven\'t joined any games yet</p>';
+        
+        if (myGamesList.children.length === 0) {
+            myGamesList.innerHTML = '<p class="empty-state">You haven\'t joined any games yet</p>';
+        }
+    } catch (error) {
+        console.error('Error loading my games:', error);
     }
 }
 
-async function createGameCard(game, isMyGames) {
+function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     
@@ -245,24 +300,15 @@ async function createGameCard(game, isMyGames) {
     
     const userInPlayers = game.players?.some(p => p.uid === currentUserData?.uid);
     const userInReserves = game.reserves?.some(p => p.uid === currentUserData?.uid);
-    const userInGame = userInPlayers || userInReserves;
-    
-    // Get player details for all players
-    const playerDetails = await Promise.all((game.players || []).map(p => getUserDetails(p.uid)));
-    const reserveDetails = await Promise.all((game.reserves || []).map(p => getUserDetails(p.uid)));
     
     let playersHTML = '';
     if (playerCount > 0) {
         playersHTML = '<div class="player-list">';
-        playerDetails.forEach(player => {
-            if (player) {
-                playersHTML += `
-                    <div class="player-item-game">
-                        ✓ ${player.firstName} ${player.lastName}
-                        <span class="level-badge">${levelNames[player.level] || player.level}</span>
-                    </div>
-                `;
-            }
+        game.players.forEach(player => {
+            const userData = allUsers[player.uid];
+            const playerName = userData ? `${userData.firstName} ${userData.lastName}` : player.name;
+            const playerLevel = userData?.level ? ` <span class="level-badge">${levelNames[userData.level]}</span>` : '';
+            playersHTML += `<div class="player-item-game">✓ ${playerName}${playerLevel}</div>`;
         });
         playersHTML += '</div>';
     }
@@ -270,15 +316,11 @@ async function createGameCard(game, isMyGames) {
     let reservesHTML = '';
     if (reserveCount > 0) {
         reservesHTML = '<div class="reserve-section"><div class="reserve-header">Reserve List:</div>';
-        reserveDetails.forEach((player, index) => {
-            if (player) {
-                reservesHTML += `
-                    <div class="player-item-game">
-                        ${index + 1}. ${player.firstName} ${player.lastName}
-                        <span class="level-badge">${levelNames[player.level] || player.level}</span>
-                    </div>
-                `;
-            }
+        game.reserves.forEach((player, index) => {
+            const userData = allUsers[player.uid];
+            const playerName = userData ? `${userData.firstName} ${userData.lastName}` : player.name;
+            const playerLevel = userData?.level ? ` <span class="level-badge">${levelNames[userData.level]}</span>` : '';
+            reservesHTML += `<div class="player-item-game">${index + 1}. ${playerName}${playerLevel}</div>`;
         });
         reservesHTML += '</div>';
     }
@@ -316,24 +358,13 @@ async function createGameCard(game, isMyGames) {
     return card;
 }
 
-async function getUserDetails(uid) {
-    const userQuery = query(collection(db, 'users'), where('uid', '==', uid));
-    const userSnapshot = await getDocs(userQuery);
-    
-    if (!userSnapshot.empty) {
-        return userSnapshot.docs[0].data();
-    }
-    return null;
-}
-
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 window.updatePlayerLimit = () => {
-    const gameType = document.getElementById('gameType').value;
-    // This function is called when game type changes - can add visual feedback if needed
+    // Called when game type changes - can add visual feedback if needed
 };
 
 window.createGame = async () => {
@@ -411,13 +442,11 @@ window.joinGame = async (gameId) => {
         };
         
         if (isFull) {
-            // Add to reserves
             await updateDoc(gameRef, {
                 reserves: arrayUnion(playerData)
             });
             alert('Added to reserve list!');
         } else {
-            // Add to main players
             await updateDoc(gameRef, {
                 players: arrayUnion(playerData)
             });
@@ -448,7 +477,6 @@ window.leaveGame = async (gameId) => {
             name: `${currentUserData.firstName} ${currentUserData.lastName}`
         };
         
-        // Check if in main players or reserves
         const inPlayers = game.players?.some(p => p.uid === currentUserData.uid);
         const inReserves = game.reserves?.some(p => p.uid === currentUserData.uid);
         
@@ -457,7 +485,6 @@ window.leaveGame = async (gameId) => {
                 players: arrayRemove(playerData)
             });
             
-            // If there are reserves, promote the first one
             if (game.reserves && game.reserves.length > 0) {
                 const firstReserve = game.reserves[0];
                 await updateDoc(gameRef, {
@@ -477,37 +504,191 @@ window.leaveGame = async (gameId) => {
     }
 };
 
+// Message Board Functions
+window.loadMessages = async () => {
+    try {
+        const messagesSnapshot = await getDocs(collection(db, 'messages'));
+        
+        const messagesList = document.getElementById('messagesList');
+        if (!messagesList) return;
+        
+        messagesList.innerHTML = '';
+        
+        if (messagesSnapshot.empty) {
+            messagesList.innerHTML = '<div class="no-messages">No announcements at this time</div>';
+            return;
+        }
+        
+        const messages = [];
+        messagesSnapshot.forEach((doc) => {
+            messages.push({ id: doc.id, ...doc.data() });
+        });
+        
+        messages.sort((a, b) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+        });
+        
+        messages.forEach((message) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-item';
+            
+            const date = message.createdAt ? new Date(message.createdAt.seconds * 1000).toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'short',
+                year: 'numeric'
+            }) : 'Just now';
+            
+            messageDiv.innerHTML = `
+                <div class="message-title">${message.title}</div>
+                <div class="message-content">${message.content}</div>
+                <div class="message-date">Posted ${date}</div>
+            `;
+            
+            messagesList.appendChild(messageDiv);
+        });
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+};
+
+window.loadAdminMessages = async () => {
+    try {
+        const messagesSnapshot = await getDocs(collection(db, 'messages'));
+        
+        const adminMessagesList = document.getElementById('adminMessagesList');
+        if (!adminMessagesList) return;
+        
+        adminMessagesList.innerHTML = '';
+        
+        if (messagesSnapshot.empty) {
+            adminMessagesList.innerHTML = '<div class="no-messages">No announcements posted</div>';
+            return;
+        }
+        
+        const messages = [];
+        messagesSnapshot.forEach((doc) => {
+            messages.push({ id: doc.id, ...doc.data() });
+        });
+        
+        messages.sort((a, b) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+        });
+        
+        messages.forEach((message) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-item';
+            
+            const date = message.createdAt ? new Date(message.createdAt.seconds * 1000).toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'short',
+                year: 'numeric'
+            }) : 'Just now';
+            
+            messageDiv.innerHTML = `
+                <div class="message-title">${message.title}</div>
+                <div class="message-content">${message.content}</div>
+                <div class="message-date">Posted ${date}</div>
+                <button onclick="deleteMessage('${message.id}')" class="message-delete">Delete</button>
+            `;
+            
+            adminMessagesList.appendChild(messageDiv);
+        });
+    } catch (error) {
+        console.error('Error loading admin messages:', error);
+    }
+};
+
+window.postMessage = async () => {
+    const title = document.getElementById('messageTitle').value.trim();
+    const content = document.getElementById('messageContent').value.trim();
+    
+    if (!title || !content) {
+        alert('Please enter both title and message');
+        return;
+    }
+    
+    try {
+        await addDoc(collection(db, 'messages'), {
+            title,
+            content,
+            postedBy: currentUser.email,
+            createdAt: serverTimestamp()
+        });
+        
+        document.getElementById('messageTitle').value = '';
+        document.getElementById('messageContent').value = '';
+        
+        alert('Announcement posted successfully!');
+        window.loadAdminMessages();
+    } catch (error) {
+        alert('Failed to post announcement: ' + error.message);
+    }
+};
+
+window.deleteMessage = async (messageId) => {
+    if (!confirm('Delete this announcement?')) return;
+    
+    try {
+        await deleteDoc(doc(db, 'messages', messageId));
+        window.loadAdminMessages();
+    } catch (error) {
+        alert('Failed to delete announcement: ' + error.message);
+    }
+};
+
+// Admin Functions
 window.showAddPlayer = () => {
-    document.getElementById('addPlayerForm').style.display = 'block';
+    const addForm = document.getElementById('addPlayerForm');
+    if (addForm) addForm.style.display = 'block';
 };
 
 window.hideAddPlayer = () => {
-    document.getElementById('addPlayerForm').style.display = 'none';
+    const addForm = document.getElementById('addPlayerForm');
+    if (addForm) addForm.style.display = 'none';
     document.getElementById('adminFirstName').value = '';
     document.getElementById('adminLastName').value = '';
     document.getElementById('adminEmail').value = '';
 };
 
 async function loadApprovedPlayers() {
-    const playersQuery = query(collection(db, 'approvedPlayers'), orderBy('lastName', 'asc'));
-    const playersSnapshot = await getDocs(playersQuery);
-    
-    const playersList = document.getElementById('approvedPlayersList');
-    playersList.innerHTML = '';
-    
-    playersSnapshot.forEach((doc) => {
-        const player = { id: doc.id, ...doc.data() };
-        const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-item';
-        playerDiv.innerHTML = `
-            <div>
-                <strong>${player.firstName} ${player.lastName}</strong><br>
-                <small>${player.email}</small>
-            </div>
-            <button onclick="removePlayer('${doc.id}')" class="btn-danger-small">Remove</button>
-        `;
-        playersList.appendChild(playerDiv);
-    });
+    try {
+        const playersSnapshot = await getDocs(collection(db, 'approvedPlayers'));
+        
+        const playersList = document.getElementById('approvedPlayersList');
+        if (!playersList) return;
+        
+        playersList.innerHTML = '';
+        
+        const players = [];
+        playersSnapshot.forEach((doc) => {
+            players.push({ id: doc.id, ...doc.data() });
+        });
+        
+        players.sort((a, b) => {
+            const lastNameA = (a.lastName || '').toLowerCase();
+            const lastNameB = (b.lastName || '').toLowerCase();
+            return lastNameA.localeCompare(lastNameB);
+        });
+        
+        players.forEach((player) => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'player-item';
+            playerDiv.innerHTML = `
+                <div>
+                    <strong>${player.firstName} ${player.lastName}</strong><br>
+                    <small>${player.email}</small>
+                </div>
+                <button onclick="removePlayer('${player.id}')" class="btn-danger-small">Remove</button>
+            `;
+            playersList.appendChild(playerDiv);
+        });
+    } catch (error) {
+        console.error('Error loading approved players:', error);
+    }
 }
 
 window.addApprovedPlayer = async () => {
@@ -528,7 +709,7 @@ window.addApprovedPlayer = async () => {
             addedAt: serverTimestamp()
         });
         
-        hideAddPlayer();
+        window.hideAddPlayer();
         loadApprovedPlayers();
         alert('Player added successfully!');
     } catch (error) {

@@ -61,16 +61,31 @@
             </button>
         </nav>
 
-        <!-- Views will go here -->
-        <div id="gamesView" class="view">
-            <div class="header">
-                <h1>Upcoming Games</h1>
-                <button onclick="logout()" class="btn-secondary">Logout</button>
-            </div>
-            <div id="gamesList"></div>
-        </div>
+       <!-- Views will go here -->
+<div id="gamesView" class="view">
+    <div class="header">
+        <h1>Upcoming Games</h1>
+        <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    <!-- Message Board Section -->
+    <div id="messageBoard" class="message-board">
+        <h3>Club Announcements</h3>
+        <div id="messagesList"></div>
+    </div>
+    <div id="gamesList"></div>
+</div>
 
-        <div id="arrangeView" class="view" style="display:none;">
+<!-- ADD THIS SECTION HERE (starting around line 80) -->
+<div id="myGamesView" class="view" style="display:none;">
+    <div class="header">
+        <h1>My Games</h1>
+        <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    <div id="myGamesList"></div>
+</div>
+<!-- END OF NEW SECTION -->
+
+<div id="arrangeView" class="view" style="display:none;">
     <div class="header">
         <h1>Arrange Game</h1>
         <button onclick="logout()" class="btn-secondary">Logout</button>
@@ -116,24 +131,31 @@
     </div>
 </div>
 
-        <div id="adminView" class="view" style="display:none;">
-            <div class="header">
-                <h1>Admin Panel</h1>
-                <button onclick="logout()" class="btn-secondary">Logout</button>
-            </div>
-            <div class="card">
-                <h2>Approved Players</h2>
-                <div id="approvedPlayersList"></div>
-                <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
-            </div>
-            <div id="addPlayerForm" class="card" style="display:none;">
-                <h3>Add Player</h3>
-                <input type="text" id="adminFirstName" placeholder="First Name">
-                <input type="text" id="adminLastName" placeholder="Last Name">
-                <input type="email" id="adminEmail" placeholder="Email">
-                <button onclick="addApprovedPlayer()" class="btn-primary">Add</button>
-                <button onclick="hideAddPlayer()" class="btn-secondary">Cancel</button>
-            </div>
+       <div id="adminView" class="view" style="display:none;">
+    <div class="header">
+        <h1>Admin Panel</h1>
+        <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    
+    <!-- Messages Section -->
+    <div class="card">
+        <h2>Post Announcement</h2>
+        <input type="text" id="messageTitle" placeholder="Announcement Title" maxlength="100">
+        <textarea id="messageContent" placeholder="Message content..." rows="4" maxlength="500"></textarea>
+        <button onclick="postMessage()" class="btn-primary">Post Announcement</button>
+    </div>
+    
+    <div class="card">
+        <h2>Posted Announcements</h2>
+        <div id="adminMessagesList"></div>
+    </div>
+    
+    <!-- Existing Approved Players Section -->
+    <div class="card">
+        <h2>Approved Players</h2>
+        <div id="approvedPlayersList"></div>
+        <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
+    </div>
         </div>
     </div>
 
