@@ -333,3 +333,60 @@ label {
         border: 1px solid #e0e0e0;
     }
 }
+.game-type-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #f3e5f5;
+    color: #7b1fa2;
+    border-radius: 3px;
+    font-size: 0.75em;
+    margin-left: 4px;
+}
+
+.player-list {
+    margin: 10px 0;
+}
+
+.player-item-game {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.player-item-game:last-child {
+    border-bottom: none;
+}
+
+.reserve-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #eee;
+}
+
+.reserve-header {
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.spots-remaining {
+    color: #4caf50;
+    font-weight: 600;
+    margin: 8px 0;
+}
+
+.game-full {
+    color: #f44336;
+    font-weight: 600;
+    margin: 8px 0;
+}

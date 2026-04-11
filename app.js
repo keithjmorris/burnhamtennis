@@ -1,7 +1,7 @@
 // Firebase Configuration
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAzg6XcQ0CZnpzAc1uK07rIgDtDYHJbvK8",
@@ -18,6 +18,16 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentUserData = null;
+
+// Level display names
+const levelNames = {
+    'beginner': 'Beginner',
+    'beginner-intermediate': 'Beginner/Intermediate',
+    'intermediate': 'Intermediate',
+    'intermediate-advanced': 'Intermediate/Advanced',
+    'advanced': 'Advanced',
+    'team': 'Team'
+};
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -69,6 +79,7 @@ window.register = async () => {
     const lastName = document.getElementById('regLastName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const phone = document.getElementById('regPhone').value.trim();
+    const level = document.getElementById('regLevel').value;
     const password = document.getElementById('regPassword').value;
     
     if (!firstName || !lastName || !email || !phone) {
@@ -98,6 +109,7 @@ window.register = async () => {
             lastName,
             email: email.toLowerCase(),
             phone,
+            level,
             createdAt: serverTimestamp()
         });
         
@@ -177,14 +189,15 @@ async function loadGames() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    gamesSnapshot.forEach((doc) => {
-        const game = { id: doc.id, ...doc.data() };
+    for (const gameDoc of gamesSnapshot.docs) {
+        const game = { id: gameDoc.id, ...gameDoc.data() };
         const gameDate = new Date(game.date);
         
         if (gameDate >= today) {
-            gamesList.appendChild(createGameCard(game, false));
+            const card = await createGameCard(game, false);
+            gamesList.appendChild(card);
         }
-    });
+    }
     
     if (gamesList.children.length === 0) {
         gamesList.innerHTML = '<p class="empty-state">No upcoming games</p>';
@@ -194,7 +207,6 @@ async function loadGames() {
 async function loadMyGames() {
     if (!currentUserData) return;
     
-    const userName = `${currentUserData.firstName} ${currentUserData.lastName}`;
     const gamesQuery = query(collection(db, 'games'), orderBy('date', 'asc'));
     const gamesSnapshot = await getDocs(gamesQuery);
     
@@ -204,42 +216,99 @@ async function loadMyGames() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    gamesSnapshot.forEach((doc) => {
-        const game = { id: doc.id, ...doc.data() };
+    for (const gameDoc of gamesSnapshot.docs) {
+        const game = { id: gameDoc.id, ...gameDoc.data() };
         const gameDate = new Date(game.date);
         
-        if (gameDate >= today && game.players && game.players.includes(userName)) {
-            myGamesList.appendChild(createGameCard(game, true));
+        const allPlayers = [...(game.players || []), ...(game.reserves || [])];
+        const userInGame = allPlayers.some(p => p.uid === currentUserData.uid);
+        
+        if (gameDate >= today && userInGame) {
+            const card = await createGameCard(game, true);
+            myGamesList.appendChild(card);
         }
-    });
+    }
     
     if (myGamesList.children.length === 0) {
         myGamesList.innerHTML = '<p class="empty-state">You haven\'t joined any games yet</p>';
     }
 }
 
-function createGameCard(game, isMyGames) {
+async function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     
-    const userName = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : '';
-    const isJoined = game.players && game.players.includes(userName);
+    const maxPlayers = game.gameType === 'singles' ? 2 : 4;
+    const playerCount = game.players ? game.players.length : 0;
+    const reserveCount = game.reserves ? game.reserves.length : 0;
+    const isFull = playerCount >= maxPlayers;
+    
+    const userInPlayers = game.players?.some(p => p.uid === currentUserData?.uid);
+    const userInReserves = game.reserves?.some(p => p.uid === currentUserData?.uid);
+    const userInGame = userInPlayers || userInReserves;
+    
+    // Get player details for all players
+    const playerDetails = await Promise.all((game.players || []).map(p => getUserDetails(p.uid)));
+    const reserveDetails = await Promise.all((game.reserves || []).map(p => getUserDetails(p.uid)));
+    
+    let playersHTML = '';
+    if (playerCount > 0) {
+        playersHTML = '<div class="player-list">';
+        playerDetails.forEach(player => {
+            if (player) {
+                playersHTML += `
+                    <div class="player-item-game">
+                        ✓ ${player.firstName} ${player.lastName}
+                        <span class="level-badge">${levelNames[player.level] || player.level}</span>
+                    </div>
+                `;
+            }
+        });
+        playersHTML += '</div>';
+    }
+    
+    let reservesHTML = '';
+    if (reserveCount > 0) {
+        reservesHTML = '<div class="reserve-section"><div class="reserve-header">Reserve List:</div>';
+        reserveDetails.forEach((player, index) => {
+            if (player) {
+                reservesHTML += `
+                    <div class="player-item-game">
+                        ${index + 1}. ${player.firstName} ${player.lastName}
+                        <span class="level-badge">${levelNames[player.level] || player.level}</span>
+                    </div>
+                `;
+            }
+        });
+        reservesHTML += '</div>';
+    }
+    
+    const gameTypeBadge = `<span class="game-type-badge">${game.gameType === 'singles' ? 'Singles' : 'Doubles'}</span>`;
+    const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${levelNames[game.recommendedLevel]}</div>` : '';
     
     card.innerHTML = `
         <div class="game-header">
-            <div class="game-date">${formatDate(game.date)}</div>
+            <div>
+                ${gameTypeBadge}
+                <div class="game-date">${formatDate(game.date)}</div>
+            </div>
             <div class="game-time">${game.time}</div>
         </div>
+        ${recommendedLevel}
         <div class="game-players">
-            <strong>${game.players ? game.players.length : 0} players:</strong>
-            ${game.players ? game.players.join(', ') : 'No players yet'}
+            <strong>Players (${playerCount}/${maxPlayers}):</strong>
+            ${playerCount === 0 ? '<p style="color: #999; margin: 8px 0;">No players yet</p>' : playersHTML}
+            ${!isFull ? `<div class="spots-remaining">${maxPlayers - playerCount} spot${maxPlayers - playerCount !== 1 ? 's' : ''} remaining</div>` : '<div class="game-full">Game full</div>'}
         </div>
+        ${reservesHTML}
         <div class="game-actions">
             ${isMyGames 
                 ? `<button onclick="leaveGame('${game.id}')" class="btn-danger">Leave Game</button>`
-                : isJoined
+                : userInPlayers
                     ? '<span class="joined-badge">✓ Joined</span>'
-                    : `<button onclick="joinGame('${game.id}')" class="btn-primary">Join Game</button>`
+                    : userInReserves
+                        ? '<span class="joined-badge">✓ On Reserve List</span>'
+                        : `<button onclick="joinGame('${game.id}')" class="btn-primary">${isFull ? 'Join Reserve List' : 'Join Game'}</button>`
             }
         </div>
     `;
@@ -247,14 +316,36 @@ function createGameCard(game, isMyGames) {
     return card;
 }
 
+async function getUserDetails(uid) {
+    const userQuery = query(collection(db, 'users'), where('uid', '==', uid));
+    const userSnapshot = await getDocs(userQuery);
+    
+    if (!userSnapshot.empty) {
+        return userSnapshot.docs[0].data();
+    }
+    return null;
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+window.updatePlayerLimit = () => {
+    const gameType = document.getElementById('gameType').value;
+    // This function is called when game type changes - can add visual feedback if needed
+};
+
 window.createGame = async () => {
+    const gameType = document.getElementById('gameType').value;
     const date = document.getElementById('gameDate').value;
     const time = document.getElementById('gameTime').value;
+    const recommendedLevel = document.getElementById('recommendedLevel').value;
+    
+    if (!gameType) {
+        alert('Please select a game type');
+        return;
+    }
     
     if (!date || !time) {
         alert('Please select date and time');
@@ -271,18 +362,26 @@ window.createGame = async () => {
     }
     
     try {
-        const userName = `${currentUserData.firstName} ${currentUserData.lastName}`;
+        const playerData = {
+            uid: currentUserData.uid,
+            name: `${currentUserData.firstName} ${currentUserData.lastName}`
+        };
         
         await addDoc(collection(db, 'games'), {
+            gameType,
             date,
             time,
-            players: [userName],
+            recommendedLevel: recommendedLevel || null,
+            players: [playerData],
+            reserves: [],
             createdBy: currentUser.uid,
             createdAt: serverTimestamp()
         });
         
+        document.getElementById('gameType').value = '';
         document.getElementById('gameDate').value = '';
         document.getElementById('gameTime').value = '';
+        document.getElementById('recommendedLevel').value = '';
         
         alert('Game created successfully!');
         showGames();
@@ -293,12 +392,37 @@ window.createGame = async () => {
 
 window.joinGame = async (gameId) => {
     try {
-        const userName = `${currentUserData.firstName} ${currentUserData.lastName}`;
         const gameRef = doc(db, 'games', gameId);
+        const gameSnap = await getDoc(gameRef);
         
-        await updateDoc(gameRef, {
-            players: arrayUnion(userName)
-        });
+        if (!gameSnap.exists()) {
+            alert('Game not found');
+            return;
+        }
+        
+        const game = gameSnap.data();
+        const maxPlayers = game.gameType === 'singles' ? 2 : 4;
+        const currentPlayers = game.players ? game.players.length : 0;
+        const isFull = currentPlayers >= maxPlayers;
+        
+        const playerData = {
+            uid: currentUserData.uid,
+            name: `${currentUserData.firstName} ${currentUserData.lastName}`
+        };
+        
+        if (isFull) {
+            // Add to reserves
+            await updateDoc(gameRef, {
+                reserves: arrayUnion(playerData)
+            });
+            alert('Added to reserve list!');
+        } else {
+            // Add to main players
+            await updateDoc(gameRef, {
+                players: arrayUnion(playerData)
+            });
+            alert('Joined game successfully!');
+        }
         
         loadGames();
     } catch (error) {
@@ -310,12 +434,42 @@ window.leaveGame = async (gameId) => {
     if (!confirm('Are you sure you want to leave this game?')) return;
     
     try {
-        const userName = `${currentUserData.firstName} ${currentUserData.lastName}`;
         const gameRef = doc(db, 'games', gameId);
+        const gameSnap = await getDoc(gameRef);
         
-        await updateDoc(gameRef, {
-            players: arrayRemove(userName)
-        });
+        if (!gameSnap.exists()) {
+            alert('Game not found');
+            return;
+        }
+        
+        const game = gameSnap.data();
+        const playerData = {
+            uid: currentUserData.uid,
+            name: `${currentUserData.firstName} ${currentUserData.lastName}`
+        };
+        
+        // Check if in main players or reserves
+        const inPlayers = game.players?.some(p => p.uid === currentUserData.uid);
+        const inReserves = game.reserves?.some(p => p.uid === currentUserData.uid);
+        
+        if (inPlayers) {
+            await updateDoc(gameRef, {
+                players: arrayRemove(playerData)
+            });
+            
+            // If there are reserves, promote the first one
+            if (game.reserves && game.reserves.length > 0) {
+                const firstReserve = game.reserves[0];
+                await updateDoc(gameRef, {
+                    players: arrayUnion(firstReserve),
+                    reserves: arrayRemove(firstReserve)
+                });
+            }
+        } else if (inReserves) {
+            await updateDoc(gameRef, {
+                reserves: arrayRemove(playerData)
+            });
+        }
         
         loadMyGames();
     } catch (error) {

@@ -21,15 +21,26 @@
             </div>
 
             <div id="registerForm" style="display: none;">
-                <h2>Register</h2>
-                <input type="text" id="regFirstName" placeholder="First Name">
-                <input type="text" id="regLastName" placeholder="Last Name">
-                <input type="email" id="regEmail" placeholder="Email">
-                <input type="tel" id="regPhone" placeholder="Phone Number">
-                <input type="password" id="regPassword" placeholder="Password (min 6 characters)">
-                <button onclick="register()" class="btn-primary">Register</button>
-                <p class="link" onclick="showLogin()">Already have an account? Login</p>
-            </div>
+    <h2>Register</h2>
+    <input type="text" id="regFirstName" placeholder="First Name">
+    <input type="text" id="regLastName" placeholder="Last Name">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="tel" id="regPhone" placeholder="Phone Number">
+    
+    <label>Your Playing Level:</label>
+    <select id="regLevel">
+        <option value="beginner">Beginner</option>
+        <option value="beginner-intermediate">Beginner/Intermediate</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="intermediate-advanced">Intermediate/Advanced</option>
+        <option value="advanced">Advanced</option>
+        <option value="team">Team</option>
+    </select>
+    
+    <input type="password" id="regPassword" placeholder="Password (min 6 characters)">
+    <button onclick="register()" class="btn-primary">Register</button>
+    <p class="link" onclick="showLogin()">Already have an account? Login</p>
+</div>
         </div>
     </div>
 
@@ -59,39 +70,51 @@
             <div id="gamesList"></div>
         </div>
 
-        <div id="myGamesView" class="view" style="display:none;">
-            <div class="header">
-                <h1>My Games</h1>
-                <button onclick="logout()" class="btn-secondary">Logout</button>
-            </div>
-            <div id="myGamesList"></div>
-        </div>
-
         <div id="arrangeView" class="view" style="display:none;">
-            <div class="header">
-                <h1>Arrange Game</h1>
-                <button onclick="logout()" class="btn-secondary">Logout</button>
-            </div>
-            <div class="card">
-                <label>Date:</label>
-                <input type="date" id="gameDate">
-                <label>Time:</label>
-                <select id="gameTime">
-                    <option value="">Select time...</option>
-                    <option value="8am-9am">8am - 9am</option>
-                    <option value="9am-10am">9am - 10am</option>
-                    <option value="10am-11am">10am - 11am</option>
-                    <option value="11am-12pm">11am - 12pm</option>
-                    <option value="12pm-1pm">12pm - 1pm</option>
-                    <option value="1pm-2pm">1pm - 2pm</option>
-                    <option value="2pm-3pm">2pm - 3pm</option>
-                    <option value="3pm-4pm">3pm - 4pm</option>
-                    <option value="4pm-5pm">4pm - 5pm</option>
-                    <option value="5pm-6pm">5pm - 6pm</option>
-                </select>
-                <button onclick="createGame()" class="btn-primary">Create Game</button>
-            </div>
-        </div>
+    <div class="header">
+        <h1>Arrange Game</h1>
+        <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    <div class="card">
+        <label>Game Type:</label>
+        <select id="gameType" onchange="updatePlayerLimit()">
+            <option value="">Select game type...</option>
+            <option value="singles">Singles (2 players)</option>
+            <option value="doubles">Doubles (4 players)</option>
+        </select>
+        
+        <label>Date:</label>
+        <input type="date" id="gameDate">
+        
+        <label>Time:</label>
+        <select id="gameTime">
+            <option value="">Select time...</option>
+            <option value="8am-9am">8am - 9am</option>
+            <option value="9am-10am">9am - 10am</option>
+            <option value="10am-11am">10am - 11am</option>
+            <option value="11am-12pm">11am - 12pm</option>
+            <option value="12pm-1pm">12pm - 1pm</option>
+            <option value="1pm-2pm">1pm - 2pm</option>
+            <option value="2pm-3pm">2pm - 3pm</option>
+            <option value="3pm-4pm">3pm - 4pm</option>
+            <option value="4pm-5pm">4pm - 5pm</option>
+            <option value="5pm-6pm">5pm - 6pm</option>
+        </select>
+        
+        <label>Recommended Level (optional):</label>
+        <select id="recommendedLevel">
+            <option value="">Any level</option>
+            <option value="beginner">Beginner</option>
+            <option value="beginner-intermediate">Beginner/Intermediate</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="intermediate-advanced">Intermediate/Advanced</option>
+            <option value="advanced">Advanced</option>
+            <option value="team">Team</option>
+        </select>
+        
+        <button onclick="createGame()" class="btn-primary">Create Game</button>
+    </div>
+</div>
 
         <div id="adminView" class="view" style="display:none;">
             <div class="header">
