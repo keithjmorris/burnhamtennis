@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Burnham Tennis</title>
+    
+    <!-- ADD THESE LINES -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#4CAF50">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burnham Tennis</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -126,6 +134,11 @@
             <option value="advanced">Advanced</option>
             <option value="team">Team</option>
         </select>
+
+        <!-- ADD THIS NEW FIELD -->
+        <label>Game Description (optional):</label>
+        <textarea id="gameDescription" placeholder="E.g., 'Social doubles - all levels welcome' or 'Advanced players - fast pace'" rows="2" maxlength="200"></textarea>
+        <!-- END NEW FIELD -->
         
         <button onclick="createGame()" class="btn-primary">Create Game</button>
     </div>

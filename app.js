@@ -18,9 +18,8 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentUserData = null;
-let allUsers = {}; // Cache for user data
+let allUsers = {};
 
-// Level display names
 const levelNames = {
     'beginner': 'Beginner',
     'beginner-intermediate': 'Beginner/Intermediate',
@@ -30,7 +29,6 @@ const levelNames = {
     'team': 'Team'
 };
 
-// Auth state observer
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
@@ -46,7 +44,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Cache all users for quick lookup
 async function cacheAllUsers() {
     try {
         const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -232,7 +229,7 @@ async function loadGames() {
         futureGames.sort((a, b) => new Date(a.date) - new Date(b.date));
         
         for (const game of futureGames) {
-            const card = createGameCard(game, false);
+            const card = await createGameCard(game, false);
             gamesList.appendChild(card);
         }
         
@@ -277,7 +274,7 @@ async function loadMyGames() {
         myFutureGames.sort((a, b) => new Date(a.date) - new Date(b.date));
         
         for (const game of myFutureGames) {
-            const card = createGameCard(game, true);
+            const card = await createGameCard(game, true);
             myGamesList.appendChild(card);
         }
         
@@ -289,7 +286,7 @@ async function loadMyGames() {
     }
 }
 
-function createGameCard(game, isMyGames) {
+async function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     
@@ -300,6 +297,7 @@ function createGameCard(game, isMyGames) {
     
     const userInPlayers = game.players?.some(p => p.uid === currentUserData?.uid);
     const userInReserves = game.reserves?.some(p => p.uid === currentUserData?.uid);
+    const userInGame = userInPlayers || userInReserves;
     
     let playersHTML = '';
     if (playerCount > 0) {
@@ -327,6 +325,13 @@ function createGameCard(game, isMyGames) {
     
     const gameTypeBadge = `<span class="game-type-badge">${game.gameType === 'singles' ? 'Singles' : 'Doubles'}</span>`;
     const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${levelNames[game.recommendedLevel]}</div>` : '';
+    const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
+    
+    // Comments section (only for players/reserves)
+    let commentsHTML = '';
+    if (userInGame) {
+        commentsHTML = await createCommentsSection(game.id, game.comments || []);
+    }
     
     card.innerHTML = `
         <div class="game-header">
@@ -337,6 +342,7 @@ function createGameCard(game, isMyGames) {
             <div class="game-time">${game.time}</div>
         </div>
         ${recommendedLevel}
+        ${description}
         <div class="game-players">
             <strong>Players (${playerCount}/${maxPlayers}):</strong>
             ${playerCount === 0 ? '<p style="color: #999; margin: 8px 0;">No players yet</p>' : playersHTML}
@@ -353,10 +359,101 @@ function createGameCard(game, isMyGames) {
                         : `<button onclick="joinGame('${game.id}')" class="btn-primary">${isFull ? 'Join Reserve List' : 'Join Game'}</button>`
             }
         </div>
+        ${commentsHTML}
     `;
     
     return card;
 }
+
+async function createCommentsSection(gameId, comments) {
+    let commentsHTML = '<div class="comments-section">';
+    commentsHTML += '<div class="comments-header">Player Comments</div>';
+    
+    if (comments && comments.length > 0) {
+        comments.forEach(comment => {
+            const userData = allUsers[comment.uid];
+            const authorName = userData ? `${userData.firstName} ${userData.lastName}` : comment.authorName;
+            const timeStr = comment.timestamp ? formatCommentTime(comment.timestamp) : 'Just now';
+            
+            commentsHTML += `
+                <div class="comment-item">
+                    <div>
+                        <span class="comment-author">${authorName}</span>
+                        <span class="comment-time">${timeStr}</span>
+                    </div>
+                    <div class="comment-text">${comment.text}</div>
+                </div>
+            `;
+        });
+    } else {
+        commentsHTML += '<div class="no-comments">No comments yet</div>';
+    }
+    
+    commentsHTML += `
+        <div class="comment-input-section">
+            <textarea class="comment-input" id="commentInput-${gameId}" placeholder="Add a comment..." rows="2" maxlength="200"></textarea>
+            <button onclick="postComment('${gameId}')" class="btn-comment">Post Comment</button>
+        </div>
+    `;
+    
+    commentsHTML += '</div>';
+    return commentsHTML;
+}
+
+function formatCommentTime(timestamp) {
+    if (!timestamp || !timestamp.seconds) return 'Just now';
+    
+    const date = new Date(timestamp.seconds * 1000);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+window.postComment = async (gameId) => {
+    const input = document.getElementById(`commentInput-${gameId}`);
+    const text = input.value.trim();
+    
+    if (!text) {
+        alert('Please enter a comment');
+        return;
+    }
+    
+    try {
+        const gameRef = doc(db, 'games', gameId);
+        
+        const comment = {
+            uid: currentUserData.uid,
+            authorName: `${currentUserData.firstName} ${currentUserData.lastName}`,
+            text,
+            timestamp: serverTimestamp()
+        };
+        
+        await updateDoc(gameRef, {
+            comments: arrayUnion(comment)
+        });
+        
+        input.value = '';
+        
+        // Reload the appropriate view
+        const myGamesView = document.getElementById('myGamesView');
+        if (myGamesView && myGamesView.style.display !== 'none') {
+            loadMyGames();
+        } else {
+            loadGames();
+        }
+    } catch (error) {
+        alert('Failed to post comment: ' + error.message);
+    }
+};
 
 function formatDate(dateString) {
     const date = new Date(dateString);
@@ -364,7 +461,7 @@ function formatDate(dateString) {
 }
 
 window.updatePlayerLimit = () => {
-    // Called when game type changes - can add visual feedback if needed
+    // Called when game type changes
 };
 
 window.createGame = async () => {
@@ -372,6 +469,7 @@ window.createGame = async () => {
     const date = document.getElementById('gameDate').value;
     const time = document.getElementById('gameTime').value;
     const recommendedLevel = document.getElementById('recommendedLevel').value;
+    const description = document.getElementById('gameDescription').value.trim();
     
     if (!gameType) {
         alert('Please select a game type');
@@ -403,8 +501,10 @@ window.createGame = async () => {
             date,
             time,
             recommendedLevel: recommendedLevel || null,
+            description: description || null,
             players: [playerData],
             reserves: [],
+            comments: [],
             createdBy: currentUser.uid,
             createdAt: serverTimestamp()
         });
@@ -413,6 +513,7 @@ window.createGame = async () => {
         document.getElementById('gameDate').value = '';
         document.getElementById('gameTime').value = '';
         document.getElementById('recommendedLevel').value = '';
+        document.getElementById('gameDescription').value = '';
         
         alert('Game created successfully!');
         showGames();
