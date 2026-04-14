@@ -327,11 +327,11 @@ async function createGameCard(game, isMyGames) {
     const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${levelNames[game.recommendedLevel]}</div>` : '';
     const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
     
-    // Comments section (only for players/reserves)
-    let commentsHTML = '';
-    if (userInGame) {
-        commentsHTML = await createCommentsSection(game.id, game.comments || []);
-    }
+    // Comments section (only in My Games view, only for players/reserves)
+let commentsHTML = '';
+if (isMyGames && userInGame) {
+    commentsHTML = await createCommentsSection(game.id, game.comments || []);
+}
     
     card.innerHTML = `
         <div class="game-header">
