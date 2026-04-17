@@ -545,3 +545,19 @@ textarea {
     text-align: center;
     padding: 10px;
 }
+
+.btn-court-booking {
+    display: inline-block;
+    background: #4caf50;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9em;
+    margin-top: 10px;
+    font-weight: 600;
+}
+
+.btn-court-booking:hover {
+    background: #45a049;
+}

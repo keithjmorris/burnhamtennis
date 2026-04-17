@@ -326,6 +326,14 @@ async function createGameCard(game, isMyGames) {
     const gameTypeBadge = `<span class="game-type-badge">${game.gameType === 'singles' ? 'Singles' : 'Doubles'}</span>`;
     const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${levelNames[game.recommendedLevel]}</div>` : '';
     const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
+
+    const isOrganizer = game.createdBy === currentUserData?.uid;
+const courtBookingButton = isOrganizer ? 
+    `<a href="https://clubspark.lta.org.uk/TheBurnhamsTennisClub/Booking/BookByDate#?date=${game.date}&role=guest" 
+        target="_blank" 
+        class="btn-court-booking">
+        📅 Book Court
+    </a>` : '';
     
     // Comments section (only in My Games view, only for players/reserves)
 let commentsHTML = '';
@@ -343,6 +351,8 @@ if (isMyGames && userInGame) {
         </div>
         ${recommendedLevel}
         ${description}
+        ${courtBookingButton}
+        
         <div class="game-players">
             <strong>Players (${playerCount}/${maxPlayers}):</strong>
             ${playerCount === 0 ? '<p style="color: #999; margin: 8px 0;">No players yet</p>' : playersHTML}
@@ -509,17 +519,84 @@ window.createGame = async () => {
             createdAt: serverTimestamp()
         });
         
+        // Clear form
         document.getElementById('gameType').value = '';
         document.getElementById('gameDate').value = '';
         document.getElementById('gameTime').value = '';
         document.getElementById('recommendedLevel').value = '';
         document.getElementById('gameDescription').value = '';
         
-        alert('Game created successfully!');
-        showGames();
+        // Show booking reminder with link
+        showCourtBookingReminder(date, time);
+        
     } catch (error) {
         alert('Failed to create game: ' + error.message);
     }
+};
+
+// Court booking reminder
+function showCourtBookingReminder(date, time) {
+    const clubSparkUrl = `https://clubspark.lta.org.uk/TheBurnhamsTennisClub/Booking/BookByDate#?date=${date}&role=guest`;
+    
+    const reminderDiv = document.createElement('div');
+    reminderDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 1000;
+        max-width: 400px;
+        text-align: center;
+    `;
+    
+    reminderDiv.innerHTML = `
+        <h2 style="margin: 0 0 15px 0; color: #2196f3;">Game Created! 🎾</h2>
+        <p style="margin: 0 0 20px 0; color: #555; line-height: 1.5;">
+            Don't forget to book a court for your game on <strong>${formatDate(date)}</strong> at <strong>${time}</strong>
+        </p>
+        <a href="${clubSparkUrl}" target="_blank" onclick="closeBookingReminder()"
+           style="display: inline-block; background: #4caf50; color: white; 
+                  padding: 12px 24px; border-radius: 6px; text-decoration: none; 
+                  font-weight: 600; margin-bottom: 10px;">
+            Book Court on ClubSpark
+        </a>
+        <br>
+        <button onclick="closeBookingReminder()" 
+                style="background: #ddd; color: #333; border: none; 
+                       padding: 10px 20px; border-radius: 6px; cursor: pointer; 
+                       margin-top: 10px;">
+            I'll Book Later
+        </button>
+    `;
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'bookingOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(reminderDiv);
+    
+    reminderDiv.id = 'bookingReminder';
+}
+
+window.closeBookingReminder = () => {
+    const reminder = document.getElementById('bookingReminder');
+    const overlay = document.getElementById('bookingOverlay');
+    if (reminder) reminder.remove();
+    if (overlay) overlay.remove();
+    showGames();
 };
 
 window.joinGame = async (gameId) => {
