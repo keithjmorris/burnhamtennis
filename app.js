@@ -22,7 +22,7 @@ let allUsers = {};
 
 const levelNames = {
     'beginner': 'Beginner',
-    'beginner-intermediate': 'Beginner/Intermediate',
+    'beginner-intermediate': 'Improver',
     'intermediate': 'Intermediate',
     'intermediate-advanced': 'Intermediate/Advanced',
     'advanced': 'Advanced',
@@ -323,7 +323,11 @@ async function createGameCard(game, isMyGames) {
         reservesHTML += '</div>';
     }
     
-    const gameTypeBadge = `<span class="game-type-badge">${game.gameType === 'singles' ? 'Singles' : 'Doubles'}</span>`;
+const gameTypeBadge = `<span class="game-type-badge">${
+    game.gameType === 'singles' ? 'Singles' : 
+    game.gameType === 'doubles' ? 'Doubles' : 
+    'Social Session'
+}</span>`;
     const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${levelNames[game.recommendedLevel]}</div>` : '';
     const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
 
@@ -527,7 +531,7 @@ window.createGame = async () => {
         document.getElementById('gameDescription').value = '';
         
         // Show booking reminder with link
-        showCourtBookingReminder(date, time);
+        showCourtBookingReminder(date, time, gameType);
         
     } catch (error) {
         alert('Failed to create game: ' + error.message);
@@ -535,8 +539,10 @@ window.createGame = async () => {
 };
 
 // Court booking reminder
-function showCourtBookingReminder(date, time) {
+function showCourtBookingReminder(date, time, gameType) {
     const clubSparkUrl = `https://clubspark.lta.org.uk/TheBurnhamsTennisClub/Booking/BookByDate#?date=${date}&role=guest`;
+    const courtsNeeded = gameType === 'social' ? 2 : 1;
+    const courtText = courtsNeeded === 2 ? '2 courts' : 'a court';
     
     const reminderDiv = document.createElement('div');
     reminderDiv.style.cssText = `
@@ -556,13 +562,13 @@ function showCourtBookingReminder(date, time) {
     reminderDiv.innerHTML = `
         <h2 style="margin: 0 0 15px 0; color: #2196f3;">Game Created! 🎾</h2>
         <p style="margin: 0 0 20px 0; color: #555; line-height: 1.5;">
-            Don't forget to book a court for your game on <strong>${formatDate(date)}</strong> at <strong>${time}</strong>
+            Don't forget to book <strong>${courtText}</strong> for your game on <strong>${formatDate(date)}</strong> at <strong>${time}</strong>
         </p>
         <a href="${clubSparkUrl}" target="_blank" onclick="closeBookingReminder()"
            style="display: inline-block; background: #4caf50; color: white; 
                   padding: 12px 24px; border-radius: 6px; text-decoration: none; 
                   font-weight: 600; margin-bottom: 10px;">
-            Book Court on ClubSpark
+            Book Court${courtsNeeded === 2 ? 's' : ''} on ClubSpark
         </a>
         <br>
         <button onclick="closeBookingReminder()" 
@@ -610,7 +616,7 @@ window.joinGame = async (gameId) => {
         }
         
         const game = gameSnap.data();
-        const maxPlayers = game.gameType === 'singles' ? 2 : 4;
+        const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;
         const currentPlayers = game.players ? game.players.length : 0;
         const isFull = currentPlayers >= maxPlayers;
         

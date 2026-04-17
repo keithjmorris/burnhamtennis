@@ -38,7 +38,7 @@
     <label>Your Playing Level:</label>
     <select id="regLevel">
         <option value="beginner">Beginner</option>
-        <option value="beginner-intermediate">Beginner/Intermediate</option>
+        <option value="beginner-intermediate">Improver</option>
         <option value="intermediate">Intermediate</option>
         <option value="intermediate-advanced">Intermediate/Advanced</option>
         <option value="advanced">Advanced</option>
@@ -100,11 +100,12 @@
     </div>
     <div class="card">
         <label>Game Type:</label>
-        <select id="gameType" onchange="updatePlayerLimit()">
-            <option value="">Select game type...</option>
-            <option value="singles">Singles (2 players)</option>
-            <option value="doubles">Doubles (4 players)</option>
-        </select>
+<select id="gameType" onchange="updatePlayerLimit()">
+    <option value="">Select game type...</option>
+    <option value="singles">Singles (2 players)</option>
+    <option value="doubles">Doubles (4 players)</option>
+    <option value="social">Social Session (8 players)</option>
+</select>
         
         <label>Date:</label>
         <input type="date" id="gameDate">
@@ -128,7 +129,7 @@
         <select id="recommendedLevel">
             <option value="">Any level</option>
             <option value="beginner">Beginner</option>
-            <option value="beginner-intermediate">Beginner/Intermediate</option>
+            <option value="beginner-intermediate">Improver</option>
             <option value="intermediate">Intermediate</option>
             <option value="intermediate-advanced">Intermediate/Advanced</option>
             <option value="advanced">Advanced</option>
