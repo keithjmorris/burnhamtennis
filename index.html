@@ -4,14 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Burnham Tennis</title>
-    
-    <!-- ADD THESE LINES -->
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <meta name="theme-color" content="#4CAF50">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Burnham Tennis</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,12 +16,13 @@
             <h1>Burnham Tennis</h1>
             
             <div id="loginForm">
-                <h2>Login</h2>
-                <input type="email" id="loginEmail" placeholder="Email">
-                <input type="password" id="loginPassword" placeholder="Password">
-                <button onclick="login()" class="btn-primary">Login</button>
-                <p class="link" onclick="showRegister()">New user? Register here</p>
-            </div>
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()" class="btn-primary">Login</button>
+    <p class="link" onclick="showRegister()">New user? Register here</p>
+    <p class="link" onclick="showForgotPassword()" style="font-size: 0.9em; margin-top: 10px;">Forgot password?</p>
+</div>
 
             <div id="registerForm" style="display: none;">
     <h2>Register</h2>
@@ -48,6 +44,16 @@
     <input type="password" id="regPassword" placeholder="Password (min 6 characters)">
     <button onclick="register()" class="btn-primary">Register</button>
     <p class="link" onclick="showLogin()">Already have an account? Login</p>
+</div>
+
+<div id="forgotPasswordForm" style="display: none;">
+    <h2>Reset Password</h2>
+    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+        Enter your email address and we'll send you a password reset link.
+    </p>
+    <input type="email" id="resetEmail" placeholder="Email">
+    <button onclick="resetPassword()" class="btn-primary">Send Reset Link</button>
+    <p class="link" onclick="showLogin()">Back to login</p>
 </div>
         </div>
     </div>

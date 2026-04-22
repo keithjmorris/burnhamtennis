@@ -1,6 +1,6 @@
 // Firebase Configuration
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -131,6 +131,35 @@ window.register = async () => {
         alert('Registration successful!');
     } catch (error) {
         alert('Registration failed: ' + error.message);
+    }
+};
+
+window.showForgotPassword = () => {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'block';
+};
+
+window.resetPassword = async () => {
+    const email = document.getElementById('resetEmail').value.trim();
+    
+    if (!email) {
+        alert('Please enter your email address');
+        return;
+    }
+    
+    try {
+        await sendPasswordResetEmail(auth, email);
+        
+        alert('Password reset email sent! Check your inbox (and spam folder).');
+        document.getElementById('resetEmail').value = '';
+        showLogin();
+    } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+            alert('No account found with this email address');
+        } else {
+            alert('Failed to send reset email: ' + error.message);
+        }
     }
 };
 
