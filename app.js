@@ -645,7 +645,7 @@ window.joinGame = async (gameId) => {
         }
         
         const game = gameSnap.data();
-        const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;
+        const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;  // FIXED
         const currentPlayers = game.players ? game.players.length : 0;
         const isFull = currentPlayers >= maxPlayers;
         
