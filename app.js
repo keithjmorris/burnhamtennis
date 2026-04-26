@@ -319,7 +319,7 @@ async function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     
-    const maxPlayers = game.gameType === 'singles' ? 2 : 4;
+    const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;
     const playerCount = game.players ? game.players.length : 0;
     const reserveCount = game.reserves ? game.reserves.length : 0;
     const isFull = playerCount >= maxPlayers;
