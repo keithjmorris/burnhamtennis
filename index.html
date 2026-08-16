@@ -171,13 +171,20 @@
     </div>
     
     <!-- Existing Approved Players Section -->
-    <div class="card">
-        <h2>Approved Players</h2>
-        <div id="approvedPlayersList"></div>
-        <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
+<div class="card">
+    <h2>Approved Players</h2>
+    <div id="approvedPlayersList"></div>
+    <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
+    
+    <div id="addPlayerForm" class="card" style="display:none;">
+        <h3>Add Player</h3>
+        <input type="text" id="adminFirstName" placeholder="First Name">
+        <input type="text" id="adminLastName" placeholder="Last Name">
+        <input type="email" id="adminEmail" placeholder="Email">
+        <button onclick="addApprovedPlayer()" class="btn-primary">Add</button>
+        <button onclick="hideAddPlayer()" class="btn-secondary">Cancel</button>
     </div>
-        </div>
-    </div>
+</div>
 
     <script type="module" src="app.js"></script>
     <script>
