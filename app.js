@@ -4,12 +4,12 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAzg6XcQ0CZnpzAc1uK07rIgDtDYHJbvK8",
-  authDomain: "burnhamtennnis.firebaseapp.com",
-  projectId: "burnhamtennnis",
-  storageBucket: "burnhamtennnis.firebasestorage.app",
-  messagingSenderId: "26636389744",
-  appId: "1:26636389744:web:c018959c23161596c5d3b5"
+  apiKey: "AIzaSyBPDxnd2nGvxHC5Aig3ZeeFlpmOzP6E9Nk",
+  authDomain: "tenniscompetitionapp.firebaseapp.com",
+  projectId: "tenniscompetitionapp",
+  storageBucket: "tenniscompetitionapp.firebasestorage.app",
+  messagingSenderId: "924063493946",
+  appId: "1:924063493946:web:02fd16ac2c991f72666a03"
 };
 
 const app = initializeApp(firebaseConfig);
