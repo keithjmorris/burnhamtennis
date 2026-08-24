@@ -181,14 +181,12 @@ function renderMemberCard(member, phone, prefix) {
                     <input type="checkbox" id="editTournaments-${prefix}-${member.id}" ${member.interests?.tournaments ? 'checked' : ''}>
                     <label for="editTournaments-${prefix}-${member.id}">Tournaments/competitions</label>
                 </div>
-                <button onclick="saveMemberEdits('${member.id}', '${prefix}')" class="btn-secondary">Save Changes</button>
-            </div>
+            <button onclick="saveMemberEdits('${member.id}', '${prefix}')" class="btn-secondary">Save Changes</button>
+            ${anyApproved ? `<button onclick="revokeMember('${member.id}')" class="btn-danger">Revoke</button>` : ''}
+        </div>
 
             <button onclick="toggleEditMember('${member.id}', '${prefix}')" class="btn-secondary" style="margin-top:8px;">Edit</button>
-            ${anyApproved
-                ? `<button onclick="revokeMember('${member.id}')" class="btn-danger" style="margin-top:8px;">Revoke</button>`
-                : `<button onclick="approveMember('${member.id}')" class="btn-approve" style="margin-top:8px;">Approve</button>`
-            }
+           ${!anyApproved ? `<button onclick="approveMember('${member.id}')" class="btn-approve" style="margin-top:8px;">Approve</button>` : ''}
         </div>
     `;
 }
