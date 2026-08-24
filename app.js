@@ -45,9 +45,11 @@ window.sendVerificationCode = async () => {
         return;
     }
     const phone = formatUKPhone(rawPhone);
+    const btn = document.getElementById('sendCodeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
 
     try {
-        // Always start with a fresh reCAPTCHA verifier
         if (window.recaptchaVerifier) {
             window.recaptchaVerifier.clear();
         }
@@ -62,6 +64,9 @@ window.sendVerificationCode = async () => {
             window.recaptchaVerifier.clear();
             window.recaptchaVerifier = null;
         }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Code';
     }
 };
 
@@ -71,11 +76,18 @@ window.verifyCode = async () => {
         alert('Please enter the code');
         return;
     }
+    const btn = document.getElementById('verifyCodeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+
     try {
         await confirmationResult.confirm(code);
     } catch (error) {
         alert('Incorrect code, please try again.');
         document.getElementById('verificationCode').value = '';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verify';
     }
 };
 

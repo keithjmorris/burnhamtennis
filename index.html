@@ -19,14 +19,13 @@
             <p style="font-size:0.9em;color:#666;">Enter your UK mobile number to get started.</p>
             <input type="tel" id="phoneNumber" placeholder="07xxx xxxxxx">
             <div id="recaptcha-container"></div>
-            <button onclick="sendVerificationCode()" class="btn-primary">Send Code</button>
-        </div>
+<button id="sendCodeBtn" onclick="sendVerificationCode()" class="btn-primary">Send Code</button>        </div>
 
         <div id="codeEntryForm" style="display:none;">
             <h2>Enter Code</h2>
             <p style="font-size:0.9em;color:#666;">We've texted you a 6-digit code.</p>
             <input type="text" id="verificationCode" placeholder="123456" maxlength="6">
-            <button onclick="verifyCode()" class="btn-primary">Verify</button>
+<button id="verifyCodeBtn" onclick="verifyCode()" class="btn-primary">Verify</button>
             <p class="link" onclick="showPhoneEntry()">Back</p>
         </div>
 
