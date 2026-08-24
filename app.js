@@ -249,8 +249,7 @@ function showAuth() {
 }
 
 function showPendingOrApp() {
-    const anyApproved = currentUserData?.approved && Object.values(currentUserData.approved).some(v => v);
-    if (anyApproved) {
+    if (currentUserData?.approved?.games) {
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('appContainer').style.display = 'block';
         showGames();
