@@ -140,109 +140,160 @@ window.logout = async () => {
         alert('Logout failed: ' + error.message);
     }
 };
+function renderMemberCard(member, phone, prefix) {
+    const requestedList = Object.keys(member.interests || {}).filter(k => member.interests[k]);
+    const requested = requestedList.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ') || 'None';
+
+    const statusBadges = requestedList.map(k => {
+        const isApproved = member.approved?.[k];
+        return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.8em;margin-right:4px;background:${isApproved ? '#c8e6c9' : '#ffe0b2'};color:${isApproved ? '#2e7d32' : '#e65100'};">${k.charAt(0).toUpperCase() + k.slice(1)}: ${isApproved ? 'Approved' : 'Pending'}</span>`;
+    }).join('');
+
+    const anyApproved = requestedList.some(k => member.approved?.[k]);
+
+    return `
+        <div class="pending-item">
+            <div class="pending-name">${member.firstName} ${member.lastName}</div>
+            <div class="pending-details">
+                Phone: ${phone}<br>
+                Rating: ${ratingNames[member.rating] || member.rating}<br>
+                Requested: ${requested}<br>
+                ${statusBadges}
+            </div>
+
+            <div id="editFields-${prefix}-${member.id}" style="display:none; margin-top:10px;">
+                <input type="text" id="editFirstName-${prefix}-${member.id}" value="${member.firstName}" placeholder="First Name">
+                <input type="text" id="editLastName-${prefix}-${member.id}" value="${member.lastName}" placeholder="Last Name">
+                <select id="editRating-${prefix}-${member.id}">
+                    ${Object.entries(ratingNames).map(([num, name]) =>
+                        `<option value="${num}" ${member.rating == num ? 'selected' : ''}>${num} - ${name}</option>`
+                    ).join('')}
+                </select>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="editGames-${prefix}-${member.id}" ${member.interests?.games ? 'checked' : ''}>
+                    <label for="editGames-${prefix}-${member.id}">Arrange/join games</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="editSocial-${prefix}-${member.id}" ${member.interests?.social ? 'checked' : ''}>
+                    <label for="editSocial-${prefix}-${member.id}">Sunday social session</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="editTournaments-${prefix}-${member.id}" ${member.interests?.tournaments ? 'checked' : ''}>
+                    <label for="editTournaments-${prefix}-${member.id}">Tournaments/competitions</label>
+                </div>
+                <button onclick="saveMemberEdits('${member.id}', '${prefix}')" class="btn-secondary">Save Changes</button>
+            </div>
+
+            <button onclick="toggleEditMember('${member.id}', '${prefix}')" class="btn-secondary" style="margin-top:8px;">Edit</button>
+            ${anyApproved
+                ? `<button onclick="revokeMember('${member.id}')" class="btn-danger" style="margin-top:8px;">Revoke</button>`
+                : `<button onclick="approveMember('${member.id}')" class="btn-approve" style="margin-top:8px;">Approve</button>`
+            }
+        </div>
+    `;
+}
+
+window.toggleEditMember = (memberId, prefix) => {
+    const fields = document.getElementById(`editFields-${prefix}-${memberId}`);
+    fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+};
+
+window.saveMemberEdits = async (memberId, prefix) => {
+    try {
+        const firstName = document.getElementById(`editFirstName-${prefix}-${memberId}`).value.trim();
+        const lastName = document.getElementById(`editLastName-${prefix}-${memberId}`).value.trim();
+        const rating = parseInt(document.getElementById(`editRating-${prefix}-${memberId}`).value);
+        const interests = {
+            games: document.getElementById(`editGames-${prefix}-${memberId}`).checked,
+            social: document.getElementById(`editSocial-${prefix}-${memberId}`).checked,
+            tournaments: document.getElementById(`editTournaments-${prefix}-${memberId}`).checked
+        };
+
+        await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, interests });
+
+        alert('Changes saved');
+        loadPendingApprovals();
+        loadAllMembers();
+    } catch (error) {
+        alert('Failed to save changes: ' + error.message);
+    }
+};
 
 window.loadPendingApprovals = async () => {
     try {
         const membersSnapshot = await getDocs(collection(db, 'members'));
-        
         const pendingList = document.getElementById('pendingApprovalsList');
         if (!pendingList) return;
-        
         pendingList.innerHTML = '';
-        
+
         const pending = [];
         membersSnapshot.forEach((docSnap) => {
             const member = { id: docSnap.id, ...docSnap.data() };
             if (!member.interests) return;
-            
-            const isPending = Object.keys(member.interests).some(
-                key => member.interests[key] && !member.approved?.[key]
-            );
-            
+            const isPending = Object.keys(member.interests).some(key => member.interests[key] && !member.approved?.[key]);
             if (isPending) pending.push(member);
         });
-        
+
         if (pending.length === 0) {
             pendingList.innerHTML = '<div class="no-messages">No pending approvals</div>';
             return;
         }
-        
+
         for (const member of pending) {
             let phone = 'Not available';
             try {
                 const contactSnap = await getDoc(doc(db, 'memberContacts', member.id));
                 if (contactSnap.exists()) phone = contactSnap.data().phone;
-            } catch (e) {
-                console.error('Could not load phone for', member.id, e);
-            }
-            
-            const div = document.createElement('div');
-            div.className = 'pending-item';
-            div.innerHTML = `
-                <div class="pending-name">${member.firstName} ${member.lastName}</div>
-                <div class="pending-details">
-                    Phone: ${phone}<br>
-                    Rating: ${ratingNames[member.rating] || member.rating}<br>
-                    Requested: ${Object.keys(member.interests).filter(k => member.interests[k]).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ')}
-                </div>
-                
-                <div id="editFields-${member.id}" style="display:none; margin-top:10px;">
-                    <input type="text" id="editFirstName-${member.id}" value="${member.firstName}" placeholder="First Name">
-                    <input type="text" id="editLastName-${member.id}" value="${member.lastName}" placeholder="Last Name">
-                    <select id="editRating-${member.id}">
-                        ${Object.entries(ratingNames).map(([num, name]) => 
-                            `<option value="${num}" ${member.rating == num ? 'selected' : ''}>${num} - ${name}</option>`
-                        ).join('')}
-                    </select>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="editGames-${member.id}" ${member.interests.games ? 'checked' : ''}>
-                        <label for="editGames-${member.id}">Arrange/join games</label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="editSocial-${member.id}" ${member.interests.social ? 'checked' : ''}>
-                        <label for="editSocial-${member.id}">Sunday social session</label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="editTournaments-${member.id}" ${member.interests.tournaments ? 'checked' : ''}>
-                        <label for="editTournaments-${member.id}">Tournaments/competitions</label>
-                    </div>
-                    <button onclick="saveMemberEdits('${member.id}')" class="btn-secondary">Save Changes</button>
-                </div>
-                
-                <button onclick="toggleEditMember('${member.id}')" class="btn-secondary" style="margin-top:8px;">Edit</button>
-                <button onclick="approveMember('${member.id}')" class="btn-approve" style="margin-top:8px;">Approve</button>
-            `;
-            pendingList.appendChild(div);
+            } catch (e) { console.error(e); }
+            pendingList.insertAdjacentHTML('beforeend', renderMemberCard(member, phone, 'pending'));
         }
     } catch (error) {
         console.error('Error loading pending approvals:', error);
     }
 };
 
-window.toggleEditMember = (memberId) => {
-    const fields = document.getElementById(`editFields-${memberId}`);
-    fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+window.loadAllMembers = async () => {
+    try {
+        const membersSnapshot = await getDocs(collection(db, 'members'));
+        const allList = document.getElementById('allMembersList');
+        if (!allList) return;
+        allList.innerHTML = '';
+
+        const members = [];
+        membersSnapshot.forEach((docSnap) => {
+            const member = { id: docSnap.id, ...docSnap.data() };
+            if (member.interests) members.push(member);
+        });
+        members.sort((a, b) => (a.lastName || '').localeCompare(b.lastName || ''));
+
+        if (members.length === 0) {
+            allList.innerHTML = '<div class="no-messages">No members yet</div>';
+            return;
+        }
+
+        for (const member of members) {
+            let phone = 'Not available';
+            try {
+                const contactSnap = await getDoc(doc(db, 'memberContacts', member.id));
+                if (contactSnap.exists()) phone = contactSnap.data().phone;
+            } catch (e) { console.error(e); }
+            allList.insertAdjacentHTML('beforeend', renderMemberCard(member, phone, 'all'));
+        }
+    } catch (error) {
+        console.error('Error loading all members:', error);
+    }
 };
 
-window.saveMemberEdits = async (memberId) => {
+window.revokeMember = async (memberId) => {
+    if (!confirm("Revoke this member's approval? They'll need to be re-approved before using the app.")) return;
     try {
-        const firstName = document.getElementById(`editFirstName-${memberId}`).value.trim();
-        const lastName = document.getElementById(`editLastName-${memberId}`).value.trim();
-        const rating = parseInt(document.getElementById(`editRating-${memberId}`).value);
-        const interests = {
-            games: document.getElementById(`editGames-${memberId}`).checked,
-            social: document.getElementById(`editSocial-${memberId}`).checked,
-            tournaments: document.getElementById(`editTournaments-${memberId}`).checked
-        };
-        
         await updateDoc(doc(db, 'members', memberId), {
-            firstName, lastName, rating, interests
+            approved: { games: false, social: false, tournaments: false }
         });
-        
-        alert('Changes saved');
         loadPendingApprovals();
+        loadAllMembers();
     } catch (error) {
-        alert('Failed to save changes: ' + error.message);
+        alert('Failed to revoke: ' + error.message);
     }
 };
 
@@ -250,20 +301,11 @@ window.approveMember = async (memberId) => {
     try {
         const memberRef = doc(db, 'members', memberId);
         const memberSnap = await getDoc(memberRef);
-        
-        if (!memberSnap.exists()) {
-            alert('Member not found');
-            return;
-        }
-        
+        if (!memberSnap.exists()) { alert('Member not found'); return; }
         const member = memberSnap.data();
-        
-        // Approve everything they asked for
-        await updateDoc(memberRef, {
-            approved: { ...member.interests }
-        });
-        
+        await updateDoc(memberRef, { approved: { ...member.interests } });
         loadPendingApprovals();
+        loadAllMembers();   // ADD THIS LINE
     } catch (error) {
         alert('Failed to approve member: ' + error.message);
     }
@@ -365,6 +407,7 @@ window.showAdmin = () => {
     document.getElementById('adminView').style.display = 'block';
     setActiveNav('navAdmin');
     if (window.loadPendingApprovals) window.loadPendingApprovals();
+    if (window.loadAllMembers) window.loadAllMembers();
     if (window.loadAdminMessages) window.loadAdminMessages();
 };
 
