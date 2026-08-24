@@ -38,7 +38,6 @@ window.showPhoneEntry = () => {
     document.getElementById('codeEntryForm').style.display = 'none';
     document.getElementById('profileForm').style.display = 'none';
 };
-
 window.sendVerificationCode = async () => {
     const rawPhone = document.getElementById('phoneNumber').value.trim();
     if (!rawPhone) {
@@ -48,14 +47,21 @@ window.sendVerificationCode = async () => {
     const phone = formatUKPhone(rawPhone);
 
     try {
-        if (!window.recaptchaVerifier) {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+        // Always start with a fresh reCAPTCHA verifier
+        if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
         }
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+
         confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
         document.getElementById('phoneEntryForm').style.display = 'none';
         document.getElementById('codeEntryForm').style.display = 'block';
     } catch (error) {
         alert('Failed to send code: ' + error.message);
+        if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+            window.recaptchaVerifier = null;
+        }
     }
 };
 
@@ -67,9 +73,9 @@ window.verifyCode = async () => {
     }
     try {
         await confirmationResult.confirm(code);
-        // onAuthStateChanged handles what happens next
     } catch (error) {
-        alert('Incorrect code, please try again: ' + error.message);
+        alert('Incorrect code, please try again.');
+        document.getElementById('verificationCode').value = '';
     }
 };
 
@@ -120,6 +126,79 @@ window.logout = async () => {
         await signOut(auth);
     } catch (error) {
         alert('Logout failed: ' + error.message);
+    }
+};
+
+window.loadPendingApprovals = async () => {
+    try {
+        const membersSnapshot = await getDocs(collection(db, 'members'));
+        
+        const pendingList = document.getElementById('pendingApprovalsList');
+        if (!pendingList) return;
+        
+        pendingList.innerHTML = '';
+        
+        const pending = [];
+        membersSnapshot.forEach((docSnap) => {
+            const member = { id: docSnap.id, ...docSnap.data() };
+            if (!member.interests) return;
+            
+            // Pending if they've asked for something not yet approved
+            const isPending = Object.keys(member.interests).some(
+                key => member.interests[key] && !member.approved?.[key]
+            );
+            
+            if (isPending) pending.push(member);
+        });
+        
+        if (pending.length === 0) {
+            pendingList.innerHTML = '<div class="no-messages">No pending approvals</div>';
+            return;
+        }
+        
+        pending.forEach((member) => {
+            const requested = Object.keys(member.interests)
+                .filter(key => member.interests[key])
+                .map(key => key.charAt(0).toUpperCase() + key.slice(1))
+                .join(', ');
+            
+            const div = document.createElement('div');
+            div.className = 'pending-item';
+            div.innerHTML = `
+                <div class="pending-name">${member.firstName} ${member.lastName}</div>
+                <div class="pending-details">
+                    Rating: ${ratingNames[member.rating] || member.rating}<br>
+                    Requested: ${requested}
+                </div>
+                <button onclick="approveMember('${member.id}')" class="btn-approve">Approve</button>
+            `;
+            pendingList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error loading pending approvals:', error);
+    }
+};
+
+window.approveMember = async (memberId) => {
+    try {
+        const memberRef = doc(db, 'members', memberId);
+        const memberSnap = await getDoc(memberRef);
+        
+        if (!memberSnap.exists()) {
+            alert('Member not found');
+            return;
+        }
+        
+        const member = memberSnap.data();
+        
+        // Approve everything they asked for
+        await updateDoc(memberRef, {
+            approved: { ...member.interests }
+        });
+        
+        loadPendingApprovals();
+    } catch (error) {
+        alert('Failed to approve member: ' + error.message);
     }
 };
 
@@ -218,7 +297,7 @@ window.showAdmin = () => {
     hideAllViews();
     document.getElementById('adminView').style.display = 'block';
     setActiveNav('navAdmin');
-    
+    if (window.loadPendingApprovals) window.loadPendingApprovals();
     if (window.loadAdminMessages) window.loadAdminMessages();
 };
 

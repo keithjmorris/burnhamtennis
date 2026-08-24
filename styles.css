@@ -572,3 +572,36 @@ textarea {
 .checkbox-row input[type="checkbox"] {
     width: auto;
 }
+
+.pending-item {
+    background: #fff8e1;
+    border-left: 3px solid #ffa726;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.pending-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.pending-details {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.btn-approve {
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-approve:hover {
+    background: #45a049;
+}
