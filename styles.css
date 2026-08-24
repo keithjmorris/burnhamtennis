@@ -561,3 +561,14 @@ textarea {
 .btn-court-booking:hover {
     background: #45a049;
 }
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    text-align: left;
+}
+.checkbox-row input[type="checkbox"] {
+    width: auto;
+}

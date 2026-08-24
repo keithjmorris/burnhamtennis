@@ -10,53 +10,56 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Auth Container -->
-    <div id="authContainer" class="container">
-        <div class="card">
-            <h1>Burnham Tennis</h1>
-            
-            <div id="loginForm">
-    <h2>Login</h2>
-    <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="Password">
-    <button onclick="login()" class="btn-primary">Login</button>
-    <p class="link" onclick="showRegister()">New user? Register here</p>
-    <p class="link" onclick="showForgotPassword()" style="font-size: 0.9em; margin-top: 10px;">Forgot password?</p>
-</div>
+    <!-- Auth Container --><div id="authContainer" class="container">
+    <div class="card">
+        <h1>Burnham Tennis</h1>
 
-            <div id="registerForm" style="display: none;">
-    <h2>Register</h2>
-    <input type="text" id="regFirstName" placeholder="First Name">
-    <input type="text" id="regLastName" placeholder="Last Name">
-    <input type="email" id="regEmail" placeholder="Email">
-    <input type="tel" id="regPhone" placeholder="Phone Number">
-    
-    <label>Your Playing Level:</label>
-    <select id="regLevel">
-        <option value="beginner">Beginner</option>
-        <option value="beginner-intermediate">Improver</option>
-        <option value="intermediate">Intermediate</option>
-        <option value="intermediate-advanced">Intermediate/Advanced</option>
-        <option value="advanced">Advanced</option>
-        <option value="team">Team</option>
-    </select>
-    
-    <input type="password" id="regPassword" placeholder="Password (min 6 characters)">
-    <button onclick="register()" class="btn-primary">Register</button>
-    <p class="link" onclick="showLogin()">Already have an account? Login</p>
-</div>
+        <div id="phoneEntryForm">
+            <h2>Login / Register</h2>
+            <p style="font-size:0.9em;color:#666;">Enter your UK mobile number to get started.</p>
+            <input type="tel" id="phoneNumber" placeholder="07xxx xxxxxx">
+            <div id="recaptcha-container"></div>
+            <button onclick="sendVerificationCode()" class="btn-primary">Send Code</button>
+        </div>
 
-<div id="forgotPasswordForm" style="display: none;">
-    <h2>Reset Password</h2>
-    <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
-        Enter your email address and we'll send you a password reset link.
-    </p>
-    <input type="email" id="resetEmail" placeholder="Email">
-    <button onclick="resetPassword()" class="btn-primary">Send Reset Link</button>
-    <p class="link" onclick="showLogin()">Back to login</p>
-</div>
+        <div id="codeEntryForm" style="display:none;">
+            <h2>Enter Code</h2>
+            <p style="font-size:0.9em;color:#666;">We've texted you a 6-digit code.</p>
+            <input type="text" id="verificationCode" placeholder="123456" maxlength="6">
+            <button onclick="verifyCode()" class="btn-primary">Verify</button>
+            <p class="link" onclick="showPhoneEntry()">Back</p>
+        </div>
+
+        <div id="profileForm" style="display:none;">
+            <h2>Your Details</h2>
+            <input type="text" id="regFirstName" placeholder="First Name">
+            <input type="text" id="regLastName" placeholder="Last Name">
+
+            <label>Self-Assessed Playing Level:</label>
+            <select id="regRating">
+                <option value="1">1 - Beginner: new to tennis, very short rallies</option>
+                <option value="2">2 - Improver: keeps ball in play, limited control</option>
+                <option value="3">3 - Social: consistent social pace, basic tactics</option>
+                <option value="4">4 - Intermediate: reliable combination of shots</option>
+                <option value="5">5 - Improving Club Player: developing a dominant shot</option>
+                <option value="6">6 - Strong Club Player: solid all-round, competes confidently</option>
+            </select>
+
+            <label>What would you like to take part in?</label>
+            <div class="checkbox-row"><input type="checkbox" id="interestGames"> <label for="interestGames">Arrange/join games</label></div>
+            <div class="checkbox-row"><input type="checkbox" id="interestSocial"> <label for="interestSocial">Sunday social session</label></div>
+            <div class="checkbox-row"><input type="checkbox" id="interestTournaments"> <label for="interestTournaments">Tournaments/competitions</label></div>
+
+            <button onclick="completeProfile()" class="btn-primary">Finish</button>
+        </div>
+
+        <div id="pendingApprovalMessage" style="display:none; text-align:center;">
+            <h2>Thanks for registering!</h2>
+            <p>Your details have been sent to the committee for approval. You'll be able to use the sections you selected once approved.</p>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
         </div>
     </div>
+</div>
 
     <!-- Main App -->
     <div id="appContainer" style="display: none;">
@@ -171,20 +174,7 @@
     </div>
     
     <!-- Existing Approved Players Section -->
-<div class="card">
-    <h2>Approved Players</h2>
-    <div id="approvedPlayersList"></div>
-    <button onclick="showAddPlayer()" class="btn-primary">Add Player</button>
-    
-    <div id="addPlayerForm" class="card" style="display:none;">
-        <h3>Add Player</h3>
-        <input type="text" id="adminFirstName" placeholder="First Name">
-        <input type="text" id="adminLastName" placeholder="Last Name">
-        <input type="email" id="adminEmail" placeholder="Email">
-        <button onclick="addApprovedPlayer()" class="btn-primary">Add</button>
-        <button onclick="hideAddPlayer()" class="btn-secondary">Cancel</button>
-    </div>
-</div>
+
 
     <script type="module" src="app.js"></script>
     <script>
