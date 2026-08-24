@@ -155,7 +155,6 @@ window.loadPendingApprovals = async () => {
             const member = { id: docSnap.id, ...docSnap.data() };
             if (!member.interests) return;
             
-            // Pending if they've asked for something not yet approved
             const isPending = Object.keys(member.interests).some(
                 key => member.interests[key] && !member.approved?.[key]
             );
@@ -168,26 +167,82 @@ window.loadPendingApprovals = async () => {
             return;
         }
         
-        pending.forEach((member) => {
-            const requested = Object.keys(member.interests)
-                .filter(key => member.interests[key])
-                .map(key => key.charAt(0).toUpperCase() + key.slice(1))
-                .join(', ');
+        for (const member of pending) {
+            let phone = 'Not available';
+            try {
+                const contactSnap = await getDoc(doc(db, 'memberContacts', member.id));
+                if (contactSnap.exists()) phone = contactSnap.data().phone;
+            } catch (e) {
+                console.error('Could not load phone for', member.id, e);
+            }
             
             const div = document.createElement('div');
             div.className = 'pending-item';
             div.innerHTML = `
                 <div class="pending-name">${member.firstName} ${member.lastName}</div>
                 <div class="pending-details">
+                    Phone: ${phone}<br>
                     Rating: ${ratingNames[member.rating] || member.rating}<br>
-                    Requested: ${requested}
+                    Requested: ${Object.keys(member.interests).filter(k => member.interests[k]).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ')}
                 </div>
-                <button onclick="approveMember('${member.id}')" class="btn-approve">Approve</button>
+                
+                <div id="editFields-${member.id}" style="display:none; margin-top:10px;">
+                    <input type="text" id="editFirstName-${member.id}" value="${member.firstName}" placeholder="First Name">
+                    <input type="text" id="editLastName-${member.id}" value="${member.lastName}" placeholder="Last Name">
+                    <select id="editRating-${member.id}">
+                        ${Object.entries(ratingNames).map(([num, name]) => 
+                            `<option value="${num}" ${member.rating == num ? 'selected' : ''}>${num} - ${name}</option>`
+                        ).join('')}
+                    </select>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="editGames-${member.id}" ${member.interests.games ? 'checked' : ''}>
+                        <label for="editGames-${member.id}">Arrange/join games</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="editSocial-${member.id}" ${member.interests.social ? 'checked' : ''}>
+                        <label for="editSocial-${member.id}">Sunday social session</label>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="editTournaments-${member.id}" ${member.interests.tournaments ? 'checked' : ''}>
+                        <label for="editTournaments-${member.id}">Tournaments/competitions</label>
+                    </div>
+                    <button onclick="saveMemberEdits('${member.id}')" class="btn-secondary">Save Changes</button>
+                </div>
+                
+                <button onclick="toggleEditMember('${member.id}')" class="btn-secondary" style="margin-top:8px;">Edit</button>
+                <button onclick="approveMember('${member.id}')" class="btn-approve" style="margin-top:8px;">Approve</button>
             `;
             pendingList.appendChild(div);
-        });
+        }
     } catch (error) {
         console.error('Error loading pending approvals:', error);
+    }
+};
+
+window.toggleEditMember = (memberId) => {
+    const fields = document.getElementById(`editFields-${memberId}`);
+    fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+};
+
+window.saveMemberEdits = async (memberId) => {
+    try {
+        const firstName = document.getElementById(`editFirstName-${memberId}`).value.trim();
+        const lastName = document.getElementById(`editLastName-${memberId}`).value.trim();
+        const rating = parseInt(document.getElementById(`editRating-${memberId}`).value);
+        const interests = {
+            games: document.getElementById(`editGames-${memberId}`).checked,
+            social: document.getElementById(`editSocial-${memberId}`).checked,
+            tournaments: document.getElementById(`editTournaments-${memberId}`).checked
+        };
+        
+        await updateDoc(doc(db, 'members', memberId), {
+            firstName, lastName, rating, interests
+        });
+        
+        alert('Changes saved');
+        loadPendingApprovals();
+    } catch (error) {
+        alert('Failed to save changes: ' + error.message);
     }
 };
 
