@@ -30,27 +30,28 @@
         </div>
 
         <div id="profileForm" style="display:none;">
-            <h2>Your Details</h2>
-            <input type="text" id="regFirstName" placeholder="First Name">
-            <input type="text" id="regLastName" placeholder="Last Name">
+    <h2>Your Details</h2>
+    <input type="text" id="regFirstName" placeholder="First Name">
+    <input type="text" id="regLastName" placeholder="Last Name">
 
-            <label>Self-Assessed Playing Level:</label>
-            <select id="regRating">
-                <option value="1">1 - Beginner: new to tennis, very short rallies</option>
-                <option value="2">2 - Improver: keeps ball in play, limited control</option>
-                <option value="3">3 - Social: consistent social pace, basic tactics</option>
-                <option value="4">4 - Intermediate: reliable combination of shots</option>
-                <option value="5">5 - Improving Club Player: developing a dominant shot</option>
-                <option value="6">6 - Strong Club Player: solid all-round, competes confidently</option>
-            </select>
+    <label>Self-Assessed Playing Level:</label>
+    <select id="regRating">
+        <option value="1">1 - Beginner: new to tennis, very short rallies</option>
+        <option value="2">2 - Improver: keeps ball in play, limited control</option>
+        <option value="3">3 - Social: consistent social pace, basic tactics</option>
+        <option value="4">4 - Intermediate: reliable combination of shots</option>
+        <option value="5">5 - Improving Club Player: developing a dominant shot</option>
+        <option value="6">6 - Strong Club Player: solid all-round, competes confidently</option>
+    </select>
 
-            <label>What would you like to take part in?</label>
-            <div class="checkbox-row"><input type="checkbox" id="interestGames"> <label for="interestGames">Arrange/join games</label></div>
-            <div class="checkbox-row"><input type="checkbox" id="interestSocial"> <label for="interestSocial">Sunday social session</label></div>
-            <div class="checkbox-row"><input type="checkbox" id="interestTournaments"> <label for="interestTournaments">Tournaments/competitions</label></div>
+    <label>What would you like to take part in?</label>
+    <div class="checkbox-row"><input type="checkbox" id="interestGames"> <label for="interestGames">Arrange/join games</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="interestSocial"> <label for="interestSocial">Sunday social session</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="interestTournaments"> <label for="interestTournaments">Tournaments/competitions</label></div>
 
-            <button onclick="completeProfile()" class="btn-primary">Finish</button>
-        </div>
+    <button onclick="completeProfile()" class="btn-primary">Finish</button>
+    <p class="link" onclick="logout()">Not you? Logout</p>
+</div>
 
         <div id="pendingApprovalMessage" style="display:none; text-align:center;">
             <h2>Thanks for registering!</h2>
@@ -171,7 +172,7 @@
         <h2>Post Announcement</h2>
         <input type="text" id="messageTitle" placeholder="Announcement Title" maxlength="100">
         <textarea id="messageContent" placeholder="Message content..." rows="4" maxlength="500"></textarea>
-        <button onclick="postMessage()" class="btn-primary">Post Announcement</button>
+        <button onclick="postAnnouncement()" class="btn-primary">Post Announcement</button>
     </div>
     
     <div class="card">
