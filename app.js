@@ -39,9 +39,7 @@ function setupForegroundMessaging() {
     try {
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
-            const title = payload.notification?.title || 'Burnham Tennis';
-            const body = payload.notification?.body || '';
-            alert(`${title}\n${body}`);
+            console.log('Notification received while app open:', payload);
         });
     } catch (error) {
         console.error('Foreground messaging setup failed:', error);
