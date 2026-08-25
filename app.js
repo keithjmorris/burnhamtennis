@@ -36,12 +36,15 @@ function updateAlertsToggleUI() {
 
     btn.textContent = currentUserData?.alertsEnabled ? '🔔 Alerts On' : '🔕 Alerts Off';
 }
-
 function setupForegroundMessaging() {
     try {
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
-            console.log('Notification received while app open:', payload);
+            const title = payload.notification?.title || 'Burnham Tennis';
+            const body = payload.notification?.body || '';
+            if (Notification.permission === 'granted') {
+                new Notification(title, { body, icon: '/icon-192.png' });
+            }
         });
     } catch (error) {
         console.error('Foreground messaging setup failed:', error);
