@@ -215,13 +215,15 @@ window.completeProfile = async () => {
     }
 };
 
-window.logout = async () => {
+indow.logout = async () => {
     try {
         await signOut(auth);
+        location.reload();
     } catch (error) {
         alert('Logout failed: ' + error.message);
     }
 };
+
 function renderMemberCard(member, phone, prefix) {
     const requestedList = Object.keys(member.interests || {}).filter(k => member.interests[k]);
     const requested = requestedList.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(', ') || 'None';
