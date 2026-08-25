@@ -215,7 +215,7 @@ window.completeProfile = async () => {
     }
 };
 
-indow.logout = async () => {
+window.logout = async () => {
     try {
         await signOut(auth);
         location.reload();
