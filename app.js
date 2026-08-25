@@ -462,13 +462,14 @@ onAuthStateChanged(auth, async (user) => {
         showAuth();
     }
 });
-
 window.showGames = () => {
     hideAllViews();
     document.getElementById('gamesView').style.display = 'block';
     setActiveNav('navGames');
     loadGames();
     if (window.loadMessages) window.loadMessages();
+    console.log('showGames about to call updateAlertsToggleUI');
+    updateAlertsToggleUI();
 };
 
 window.showMyGames = () => {
