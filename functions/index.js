@@ -1,32 +1,74 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+initializeApp();
+const db = getFirestore();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+async function sendToUid(uid, title, body) {
+    if (!uid) return;
+    try {
+        const contactSnap = await db.collection("memberContacts").doc(uid).get();
+        const token = contactSnap.exists ? contactSnap.data().fcmToken : null;
+        if (!token) return;
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+        await getMessaging().send({
+            token,
+            notification: { title, body }
+        });
+    } catch (error) {
+        console.error(`Failed to send to ${uid}:`, error);
+    }
+}
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+async function getAlertableUids(excludeUid) {
+    const membersSnap = await db.collection("members")
+        .where("interests.games", "==", true)
+        .get();
+
+    return membersSnap.docs
+        .filter(doc => {
+            const data = doc.data();
+            return data.approved?.games === true && data.alertsEnabled === true;
+        })
+        .map(doc => doc.id)
+        .filter(uid => uid !== excludeUid);
+}
+
+// Trigger 1: New game created -> notify everyone eligible except the organiser
+exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
+    const game = event.data.data();
+    const uids = await getAlertableUids(game.createdBy);
+
+    const title = "New game arranged";
+    const body = `${game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session"} on ${game.date} at ${game.time}`;
+
+    await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
+});
+
+// Trigger 2 & 3: Someone leaves a game (notify remaining players) / someone joins (notify organiser)
+exports.onGameUpdated = onDocumentUpdated("games/{gameId}", async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    const beforePlayers = (before.players || []).map(p => p.uid);
+    const afterPlayers = (after.players || []).map(p => p.uid);
+
+    // Someone left
+    const left = beforePlayers.filter(uid => !afterPlayers.includes(uid));
+    if (left.length > 0) {
+        const remaining = afterPlayers.filter(uid => uid !== after.createdBy || afterPlayers.length > 1);
+        const title = "Someone left your game";
+        const body = `A player left the game on ${after.date} at ${after.time}`;
+        await Promise.all(afterPlayers.map(uid => sendToUid(uid, title, body)));
+    }
+
+    // Someone joined
+    const joined = afterPlayers.filter(uid => !beforePlayers.includes(uid));
+    if (joined.length > 0 && after.createdBy && !joined.includes(after.createdBy)) {
+        const title = "New player joined your game";
+        const body = `Someone joined your game on ${after.date} at ${after.time}`;
+        await sendToUid(after.createdBy, title, body);
+    }
+});
