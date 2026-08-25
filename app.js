@@ -32,6 +32,8 @@ const VAPID_KEY = 'BJAj3KnB8v8gjYJRRZ6R0_9U9C58a2_9TBKXn8LlbUTJ__OCs_WgA8D-zUdwk
 function updateAlertsToggleUI() {
     const btn = document.getElementById('alertsToggleBtn');
     if (!btn) return;
+        console.log('updateAlertsToggleUI running, alertsEnabled =', currentUserData?.alertsEnabled);
+
     btn.textContent = currentUserData?.alertsEnabled ? '🔔 Alerts On' : '🔕 Alerts Off';
 }
 
@@ -47,6 +49,7 @@ function setupForegroundMessaging() {
 }
 
 window.toggleAlerts = () => {
+     console.log('toggleAlerts clicked, currentUserData.alertsEnabled =', currentUserData?.alertsEnabled);
     if (currentUserData?.alertsEnabled) {
         disableAlerts();
     } else {
