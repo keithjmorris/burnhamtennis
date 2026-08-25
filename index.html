@@ -78,10 +78,10 @@
             </button>
         </nav>
 
-       <!-- Views will go here -->
-<div id="gamesView" class="view">
+       <!-- Views will go here --><div id="gamesView" class="view">
     <div class="header">
         <h1>Upcoming Games</h1>
+        <button id="alertsToggleBtn" onclick="toggleAlerts()" class="btn-secondary">🔕 Alerts Off</button>
         <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
     <!-- Message Board Section -->
@@ -92,12 +92,14 @@
     <div id="gamesList"></div>
 </div>
 
+
 <!-- ADD THIS SECTION HERE (starting around line 80) -->
 <div id="myGamesView" class="view" style="display:none;">
     <div class="header">
-        <h1>My Games</h1>
-        <button onclick="logout()" class="btn-secondary">Logout</button>
-    </div>
+    <h1>Upcoming Games</h1>
+    <button id="alertsToggleBtn" onclick="toggleAlerts()" class="btn-secondary">🔕 Alerts Off</button>
+    <button onclick="logout()" class="btn-secondary">Logout</button>
+</div>
     <div id="myGamesList"></div>
 </div>
 <!-- END OF NEW SECTION -->

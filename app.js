@@ -2,6 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, doc, query, where, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBPDxnd2nGvxHC5Aig3ZeeFlpmOzP6E9Nk",
@@ -24,6 +25,83 @@ let confirmationResult = null;
 const ratingNames = {
     1: 'Beginner', 2: 'Improver', 3: 'Social',
     4: 'Intermediate', 5: 'Improving Club Player', 6: 'Strong Club Player'
+};
+
+const VAPID_KEY = 'BJAj3KnB8v8gjYJRRZ6R0_9U9C58a2_9TBKXn8LlbUTJ__OCs_WgA8D-zUdwknXzn3N8j1u-ANRrusLBpDQXXug';
+
+function updateAlertsToggleUI() {
+    const btn = document.getElementById('alertsToggleBtn');
+    if (!btn) return;
+    btn.textContent = currentUserData?.alertsEnabled ? '🔔 Alerts On' : '🔕 Alerts Off';
+}
+
+function setupForegroundMessaging() {
+    try {
+        const messaging = getMessaging(app);
+        onMessage(messaging, (payload) => {
+            const title = payload.notification?.title || 'Burnham Tennis';
+            const body = payload.notification?.body || '';
+            alert(`${title}\n${body}`);
+        });
+    } catch (error) {
+        console.error('Foreground messaging setup failed:', error);
+    }
+}
+
+window.toggleAlerts = () => {
+    if (currentUserData?.alertsEnabled) {
+        disableAlerts();
+    } else {
+        enableAlerts();
+    }
+};
+
+window.enableAlerts = async () => {
+    try {
+        if (!('serviceWorker' in navigator)) {
+            alert('Notifications are not supported on this browser.');
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const permission = await Notification.requestPermission();
+
+        if (permission !== 'granted') {
+            alert('Notification permission was not granted.');
+            return;
+        }
+
+        const messaging = getMessaging(app);
+        const token = await getToken(messaging, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: registration
+        });
+
+        if (!token) {
+            alert('Could not get a notification token. Please try again.');
+            return;
+        }
+
+        await updateDoc(doc(db, 'members', currentUser.uid), { alertsEnabled: true });
+        await updateDoc(doc(db, 'memberContacts', currentUser.uid), { fcmToken: token });
+
+        currentUserData.alertsEnabled = true;
+        updateAlertsToggleUI();
+        setupForegroundMessaging();
+        alert('Alerts turned on!');
+    } catch (error) {
+        alert('Failed to enable alerts: ' + error.message);
+    }
+};
+
+window.disableAlerts = async () => {
+    try {
+        await updateDoc(doc(db, 'members', currentUser.uid), { alertsEnabled: false });
+        currentUserData.alertsEnabled = false;
+        updateAlertsToggleUI();
+    } catch (error) {
+        alert('Failed to disable alerts: ' + error.message);
+    }
 };
 
 function formatUKPhone(input) {
@@ -128,6 +206,9 @@ window.completeProfile = async () => {
 
         await loadUserData();
         showPendingOrApp();
+        if (currentUserData?.alertsEnabled) {
+    setupForegroundMessaging();
+}
     } catch (error) {
         alert('Failed to save your details: ' + error.message);
     }
