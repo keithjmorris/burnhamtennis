@@ -13,7 +13,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-    const title = payload.notification?.title || 'Burnham Tennis';
-    const body = payload.notification?.body || '';
+    const title = payload.data?.title || 'Burnham Tennis';
+    const body = payload.data?.body || '';
     self.registration.showNotification(title, { body, icon: '/icon-192.png' });
 });

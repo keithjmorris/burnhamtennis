@@ -40,8 +40,8 @@ function setupForegroundMessaging() {
     try {
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
-            const title = payload.notification?.title || 'Burnham Tennis';
-            const body = payload.notification?.body || '';
+            const title = payload.data?.title || 'Burnham Tennis';
+            const body = payload.data?.body || '';
             if (Notification.permission === 'granted') {
                 new Notification(title, { body, icon: '/icon-192.png' });
             }
