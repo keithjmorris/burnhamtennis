@@ -67,6 +67,12 @@ window.enableAlerts = async () => {
             return;
         }
 
+        // Clear out any old/duplicate registrations first
+        const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of existingRegistrations) {
+            await reg.unregister();
+        }
+
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         const permission = await Notification.requestPermission();
 
