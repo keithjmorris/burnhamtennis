@@ -3,37 +3,25 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
-// debug build 25 Aug 21:55
-
 initializeApp();
 const db = getFirestore();
 
 async function sendToUid(uid, title, body) {
-    const debugRef = db.collection("debugLog").doc();
-    if (!uid) {
-        await debugRef.set({ uid: null, result: "skipped - no uid", timestamp: new Date() });
-        return;
-    }
+    if (!uid) return;
     try {
         const contactSnap = await db.collection("memberContacts").doc(uid).get();
         const token = contactSnap.exists ? contactSnap.data().fcmToken : null;
-
-        if (!token) {
-            await debugRef.set({ uid, result: "no token found", timestamp: new Date() });
-            return;
-        }
+        if (!token) return;
 
         await getMessaging().send({
-    token,
-    data: {
-        title: String(title),
-        body: String(body)
-    }
-});
-
-        await debugRef.set({ uid, result: "sent successfully", tokenPrefix: token.substring(0, 20), timestamp: new Date() });
+            token,
+            data: {
+                title: String(title),
+                body: String(body)
+            }
+        });
     } catch (error) {
-        await debugRef.set({ uid, result: "ERROR: " + error.message, timestamp: new Date() });
+        console.error(`Failed to send to ${uid}:`, error);
     }
 }
 
@@ -53,28 +41,13 @@ async function getAlertableUids(excludeUid) {
 
 // Trigger 1: New game created -> notify everyone eligible except the organiser
 exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
-    try {
-        const game = event.data.data();
-        const uids = await getAlertableUids(game.createdBy);
+    const game = event.data.data();
+    const uids = await getAlertableUids(game.createdBy);
 
-        await db.collection("debugLog").add({
-            stage: "onGameCreated started",
-            createdBy: game.createdBy || "MISSING",
-            uidsFound: uids,
-            timestamp: new Date()
-        });
+    const title = "New game arranged";
+    const body = `${game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session"} on ${game.date} at ${game.time}`;
 
-        const title = "New game arranged";
-        const body = `${game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session"} on ${game.date} at ${game.time}`;
-
-        await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
-    } catch (error) {
-        await db.collection("debugLog").add({
-            stage: "onGameCreated CRASHED",
-            error: error.message,
-            timestamp: new Date()
-        });
-    }
+    await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
 });
 
 // Trigger 2 & 3: Someone leaves a game (notify remaining players) / someone joins (notify organiser)

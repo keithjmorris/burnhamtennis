@@ -453,7 +453,7 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
         await loadUserData();
-        console.log('DEBUG uid:', user.uid, 'memberData:', currentUserData);
+        
         await cacheAllUsers();
 
         if (!currentUserData) {
