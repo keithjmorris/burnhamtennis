@@ -84,6 +84,12 @@
         <button id="alertsToggleBtn" onclick="toggleAlerts()" class="btn-secondary">🔕 Alerts Off</button>
         <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
+
+    div id="installBanner" style="display:none; background:#e3f2fd; padding:12px; border-radius:8px; margin-bottom:12px; font-size:0.9em;">
+    <a href="#" onclick="showInstallInstructions(); return false;" id="installBannerText" style="color:#1976d2; text-decoration:underline;"></a>
+    <button onclick="dismissInstallBanner()" style="float:right; background:none; border:none; font-weight:600; color:#1976d2; cursor:pointer;">Got it</button>
+</div>
+
     <!-- Message Board Section -->
     <div id="messageBoard" class="message-board">
         <h3>Club Announcements</h3>

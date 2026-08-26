@@ -471,14 +471,15 @@ onAuthStateChanged(auth, async (user) => {
         showAuth();
     }
 });
+
 window.showGames = () => {
     hideAllViews();
     document.getElementById('gamesView').style.display = 'block';
     setActiveNav('navGames');
     loadGames();
     if (window.loadMessages) window.loadMessages();
-    console.log('showGames about to call updateAlertsToggleUI');
     updateAlertsToggleUI();
+    checkInstallBanner();   // ADD THIS LINE
 };
 
 window.showMyGames = () => {
@@ -551,6 +552,83 @@ async function loadGames() {
         console.error('Error loading games:', error);
     }
 }
+
+let detectedPlatform = null;
+
+function checkInstallBanner() {
+    const isStandalone = window.navigator.standalone === true 
+        || window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (isStandalone) return;
+    if (localStorage.getItem('installBannerDismissed')) return;
+    
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+    
+    if (isIOS) {
+        detectedPlatform = 'ios';
+    } else if (isAndroid) {
+        detectedPlatform = 'android';
+    } else {
+        return; // desktop - nothing to show
+    }
+    
+    document.getElementById('installBannerText').textContent = '📱 Tap here to set up the app on your phone (and enable alerts)';
+    document.getElementById('installBanner').style.display = 'block';
+}
+
+window.dismissInstallBanner = () => {
+    document.getElementById('installBanner').style.display = 'none';
+    localStorage.setItem('installBannerDismissed', 'true');
+};
+
+window.showInstallInstructions = () => {
+    const steps = detectedPlatform === 'ios'
+        ? `
+            <ol style="text-align:left; line-height:1.8;">
+                <li>Tap the <strong>Share</strong> icon (square with an arrow) at the bottom of Safari</li>
+                <li>Scroll down and tap <strong>"Add to Home Screen"</strong>, then <strong>Add</strong></li>
+                <li>Close Safari, and open the app using the new icon on your Home Screen</li>
+                <li>Go to the <strong>Games</strong> tab and tap the <strong>Alerts</strong> button, then allow notifications</li>
+            </ol>
+            <p style="font-size:0.85em; color:#666;">Note: alerts only work when opened from the Home Screen icon, not from a normal Safari tab - this is an Apple restriction.</p>
+        `
+        : `
+            <ol style="text-align:left; line-height:1.8;">
+                <li>Tap the menu (three dots, top right) in Chrome</li>
+                <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+                <li>Open the app from the new icon</li>
+                <li>Go to the <strong>Games</strong> tab and tap the <strong>Alerts</strong> button, then allow notifications</li>
+            </ol>
+        `;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'installOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999;';
+    overlay.onclick = closeInstallInstructions;
+
+    const modal = document.createElement('div');
+    modal.id = 'installModal';
+    modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:24px; border-radius:12px; max-width:400px; width:85%; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+    modal.onclick = (e) => e.stopPropagation();
+    modal.innerHTML = `
+        <h2 style="margin-top:0; color:#2196f3;">Set Up the App</h2>
+        ${steps}
+        <button onclick="closeInstallInstructions()" class="btn-primary" style="width:100%; margin-top:10px;">Close</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+};
+
+window.closeInstallInstructions = () => {
+    const overlay = document.getElementById('installOverlay');
+    const modal = document.getElementById('installModal');
+    if (overlay) overlay.remove();
+    if (modal) modal.remove();
+    dismissInstallBanner();
+};
 
 async function loadMyGames() {
     if (!currentUserData) return;
