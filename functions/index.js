@@ -2,6 +2,7 @@ const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 initializeApp();
 const db = getFirestore();
@@ -48,6 +49,44 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
     const body = `${game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session"} on ${game.date} at ${game.time}`;
 
     await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
+});
+
+exports.generateWeeklyFixtures = onSchedule({ schedule: "0 6 * * *", timeZone: "Europe/London" }, async () => {
+    const templatesSnap = await db.collection("fixtureTemplates").get();
+
+    for (const templateDoc of templatesSnap.docs) {
+        const t = templateDoc.data();
+        if (!t.active) continue;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysUntilTarget = (t.dayOfWeek - today.getDay() + 7) % 7;
+        const occurrence = new Date(today);
+        occurrence.setDate(today.getDate() + daysUntilTarget);
+        const dateStr = occurrence.toISOString().split("T")[0];
+
+        if (daysUntilTarget > t.daysBeforeOpen) continue;
+
+        const existing = await db.collection("games")
+            .where("fixtureType", "==", templateDoc.id)
+            .where("date", "==", dateStr)
+            .get();
+        if (!existing.empty) continue;
+
+        await db.collection("games").add({
+            gameType: "social",
+            date: dateStr,
+            time: t.time,
+            fixtureType: templateDoc.id,
+            description: null,
+            recommendedLevel: null,
+            players: [],
+            reserves: [],
+            comments: [],
+            createdBy: null,
+            createdAt: new Date()
+        });
+    }
 });
 
 // Trigger 2 & 3: Someone leaves a game (notify remaining players) / someone joins (notify organiser)

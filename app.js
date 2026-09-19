@@ -27,6 +27,80 @@ const ratingNames = {
     4: 'Intermediate', 5: 'Improving Club Player', 6: 'Strong Club Player'
 };
 
+const timeSlotStartHour = {
+    '8am-9am': 8, '9am-10am': 9, '10am-11am': 10, '11am-12pm': 11,
+    '12pm-1pm': 12, '1pm-2pm': 13, '2pm-3pm': 14, '3pm-4pm': 15,
+    '4pm-5pm': 16, '5pm-6pm': 17
+};
+
+function getSessionStartDateTime(dateStr, timeStr) {
+    const hour = timeSlotStartHour[timeStr];
+    if (hour === undefined) return null;
+    const d = new Date(dateStr);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+}
+
+const fixtureDefaults = {
+    'monday-deepdale': { label: 'Monday Evening (Deepdale invite)', dayOfWeek: 1 },
+    'wednesday-club':  { label: 'Wednesday Club Session', dayOfWeek: 3 },
+    'thursday-ladies': { label: 'Thursday Ladies Evening', dayOfWeek: 4 }
+};
+
+window.loadFixtureTemplates = async () => {
+    const container = document.getElementById('fixtureTemplatesList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (const [id, defaults] of Object.entries(fixtureDefaults)) {
+        const snap = await getDoc(doc(db, 'fixtureTemplates', id));
+        const t = snap.exists() ? snap.data() : {
+            dayOfWeek: defaults.dayOfWeek, time: '6pm-7pm', capacity: 8, daysBeforeOpen: 5, active: true
+        };
+
+        const div = document.createElement('div');
+        div.className = 'pending-item';
+        div.innerHTML = `
+            <div class="pending-name">${defaults.label}</div>
+            <label>Day of week:</label>
+            <select id="fx-day-${id}">
+                ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d, i) =>
+                    `<option value="${i}" ${t.dayOfWeek === i ? 'selected' : ''}>${d}</option>`).join('')}
+            </select>
+            <label>Time:</label>
+            <select id="fx-time-${id}">
+                ${Object.keys(timeSlotStartHour).map(slot =>
+                    `<option value="${slot}" ${t.time === slot ? 'selected' : ''}>${slot}</option>`).join('')}
+            </select>
+            <label>Capacity:</label>
+            <input type="number" id="fx-cap-${id}" value="${t.capacity}" min="2" max="20">
+            <label>Days before to open sign-up:</label>
+            <input type="number" id="fx-days-${id}" value="${t.daysBeforeOpen}" min="1" max="14">
+            <div class="checkbox-row">
+                <input type="checkbox" id="fx-active-${id}" ${t.active ? 'checked' : ''}>
+                <label for="fx-active-${id}">Active</label>
+            </div>
+            <button onclick="saveFixtureTemplate('${id}')" class="btn-secondary">Save</button>
+        `;
+        container.appendChild(div);
+    }
+};
+
+window.saveFixtureTemplate = async (id) => {
+    try {
+        await setDoc(doc(db, 'fixtureTemplates', id), {
+            dayOfWeek: parseInt(document.getElementById(`fx-day-${id}`).value),
+            time: document.getElementById(`fx-time-${id}`).value,
+            capacity: parseInt(document.getElementById(`fx-cap-${id}`).value),
+            daysBeforeOpen: parseInt(document.getElementById(`fx-days-${id}`).value),
+            active: document.getElementById(`fx-active-${id}`).checked
+        });
+        alert('Saved');
+    } catch (error) {
+        alert('Failed to save: ' + error.message);
+    }
+};
+
 const VAPID_KEY = 'BJAj3KnB8v8gjYJRRZ6R0_9U9C58a2_9TBKXn8LlbUTJ__OCs_WgA8D-zUdwknXzn3N8j1u-ANRrusLBpDQXXug';
 
 function updateAlertsToggleUI() {
@@ -183,6 +257,7 @@ window.completeProfile = async () => {
     const firstName = document.getElementById('regFirstName').value.trim();
     const lastName = document.getElementById('regLastName').value.trim();
     const rating = parseInt(document.getElementById('regRating').value);
+    const gender = document.getElementById('regGender').value;   // ADD THIS LINE
     const interests = {
         games: document.getElementById('interestGames').checked,
         social: document.getElementById('interestSocial').checked,
@@ -262,6 +337,11 @@ function renderMemberCard(member, phone, prefix) {
                         `<option value="${num}" ${member.rating == num ? 'selected' : ''}>${num} - ${name}</option>`
                     ).join('')}
                 </select>
+                <select id="editGender-${prefix}-${member.id}">
+    <option value="female" ${member.gender === 'female' ? 'selected' : ''}>Female</option>
+    <option value="male" ${member.gender === 'male' ? 'selected' : ''}>Male</option>
+    <option value="prefer-not-to-say" ${member.gender === 'prefer-not-to-say' ? 'selected' : ''}>Prefer not to say</option>
+</select>
                 <div class="checkbox-row">
                     <input type="checkbox" id="editGames-${prefix}-${member.id}" ${member.interests?.games ? 'checked' : ''}>
                     <label for="editGames-${prefix}-${member.id}">Arrange/join games</label>
@@ -294,13 +374,15 @@ window.saveMemberEdits = async (memberId, prefix) => {
         const firstName = document.getElementById(`editFirstName-${prefix}-${memberId}`).value.trim();
         const lastName = document.getElementById(`editLastName-${prefix}-${memberId}`).value.trim();
         const rating = parseInt(document.getElementById(`editRating-${prefix}-${memberId}`).value);
+        const gender = document.getElementById(`editGender-${prefix}-${memberId}`).value;
+await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, gender, interests });
         const interests = {
             games: document.getElementById(`editGames-${prefix}-${memberId}`).checked,
             social: document.getElementById(`editSocial-${prefix}-${memberId}`).checked,
             tournaments: document.getElementById(`editTournaments-${prefix}-${memberId}`).checked
         };
 
-        await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, interests });
+        await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, gender, interests });
 
         alert('Changes saved');
         loadPendingApprovals();
@@ -495,6 +577,62 @@ window.showArrange = () => {
     setActiveNav('navArrange');
 };
 
+window.showFixtures = () => {
+    hideAllViews();
+    document.getElementById('fixturesView').style.display = 'block';
+    setActiveNav('navFixtures');
+    loadFixtures();
+};
+
+window.loadFixtures = async () => {
+    try {
+        const gamesSnapshot = await getDocs(collection(db, 'games'));
+        const fixturesList = document.getElementById('fixturesList');
+        if (!fixturesList) return;
+        fixturesList.innerHTML = '';
+
+        const fixtures = [];
+        gamesSnapshot.forEach((gameDoc) => {
+            const game = { id: gameDoc.id, ...gameDoc.data() };
+            if (game.fixtureType) fixtures.push(game);
+        });
+        fixtures.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (fixtures.length === 0) {
+            fixturesList.innerHTML = '<p class="empty-state">No fixtures open for sign-up yet</p>';
+            return;
+        }
+
+        for (const game of fixtures) {
+            const card = await createGameCard(game, false);
+            fixturesList.appendChild(card);
+        }
+    } catch (error) {
+        console.error('Error loading fixtures:', error);
+    }
+};
+
+window.addGuest = async (gameId) => {
+    const nameInput = document.getElementById(`guestName-${gameId}`);
+    const name = nameInput.value.trim();
+    if (!name) {
+        alert('Please enter a guest name');
+        return;
+    }
+    try {
+        const guestData = {
+            uid: 'guest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            name: name + ' (Guest)',
+            isGuest: true
+        };
+        await updateDoc(doc(db, 'games', gameId), { players: arrayUnion(guestData) });
+        nameInput.value = '';
+        loadFixtures();
+    } catch (error) {
+        alert('Failed to add guest: ' + error.message);
+    }
+};
+
 window.showAdmin = () => {
     hideAllViews();
     document.getElementById('adminView').style.display = 'block';
@@ -502,6 +640,8 @@ window.showAdmin = () => {
     if (window.loadPendingApprovals) window.loadPendingApprovals();
     if (window.loadAllMembers) window.loadAllMembers();
     if (window.loadAdminMessages) window.loadAdminMessages();
+    if (window.loadFixtureTemplates) window.loadFixtureTemplates();
+
 };
 
 function hideAllViews() {
@@ -694,8 +834,7 @@ async function createGameCard(game, isMyGames) {
         game.players.forEach(player => {
             const userData = allUsers[player.uid];
             const playerName = userData ? `${userData.firstName} ${userData.lastName}` : player.name;
-            const playerLevel = userData?.level ? ` <span class="level-badge">${ratingNames[userData.rating]}</span>` : '';
-            playersHTML += `<div class="player-item-game">✓ ${playerName}${playerLevel}</div>`;
+const playerLevel = (userData?.level || player.isGuest) ? '' : ` <span class="level-badge">${levelNames[userData?.level]}</span>`;            playersHTML += `<div class="player-item-game">✓ ${playerName}${playerLevel}</div>`;
         });
         playersHTML += '</div>';
     }
@@ -727,6 +866,14 @@ const courtBookingButton = isOrganizer ?
         class="btn-court-booking">
         📅 Book Court
     </a>` : '';
+
+    // ADD guestAddBox RIGHT HERE
+const guestAddBox = (game.fixtureType === 'monday-deepdale')
+    ? `<div style="margin-top:10px;">
+            <input type="text" id="guestName-${game.id}" placeholder="Deepdale guest name" style="width:60%;">
+            <button onclick="addGuest('${game.id}')" class="btn-secondary">Add Guest</button>
+        </div>`
+    : '';
     
     // Comments section (only in My Games view, only for players/reserves)
 let commentsHTML = '';
@@ -745,6 +892,7 @@ if (isMyGames && userInGame) {
         ${recommendedLevel}
         ${description}
         ${courtBookingButton}
+        ${guestAddBox}
         
         <div class="game-players">
             <strong>Players (${playerCount}/${maxPlayers}):</strong>
@@ -1013,6 +1161,18 @@ window.joinGame = async (gameId) => {
             uid: currentUserData.uid,
             name: `${currentUserData.firstName} ${currentUserData.lastName}`
         };
+
+        if (game.fixtureType === 'thursday-ladies') {
+    const isFemale = currentUserData?.gender === 'female';
+    if (!isFemale) {
+        const sessionStart = getSessionStartDateTime(game.date, game.time);
+        const hoursUntil = (sessionStart - new Date()) / (1000 * 60 * 60);
+        if (hoursUntil > 24) {
+            alert('This session is reserved for ladies until 24 hours before start. Please check back nearer the time.');
+            return;
+        }
+    }
+}
         
         if (isFull) {
             await updateDoc(gameRef, {

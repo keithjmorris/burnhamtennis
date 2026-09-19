@@ -44,6 +44,13 @@
         <option value="6">6 - Strong Club Player: solid all-round, competes confidently</option>
     </select>
 
+    <label>Gender:</label>
+<select id="regGender">
+    <option value="female">Female</option>
+    <option value="male">Male</option>
+    <option value="prefer-not-to-say">Prefer not to say</option>
+</select>
+
     <label>What would you like to take part in?</label>
     <div class="checkbox-row"><input type="checkbox" id="interestGames"> <label for="interestGames">Arrange/join games</label></div>
     <div class="checkbox-row"><input type="checkbox" id="interestSocial"> <label for="interestSocial">Sunday social session</label></div>
@@ -73,6 +80,9 @@
             <button onclick="showArrange()" id="navArrange">
                 <span>➕</span><span>Arrange</span>
             </button>
+            <button onclick="showFixtures()" id="navFixtures">
+    <span>📅</span><span>Fixtures</span>
+</button>
             <button onclick="showAdmin()" id="navAdmin" style="display:none;">
                 <span>⚙️</span><span>Admin</span>
             </button>
@@ -172,6 +182,11 @@
     <div class="card">
     <h2>All Members</h2>
     <div id="allMembersList"></div>
+</div>
+
+<div class="card">
+    <h2>Club Fixtures Setup</h2>
+    <div id="fixtureTemplatesList"></div>
 </div>
 
      <!-- ADD THIS NEW SECTION -->
