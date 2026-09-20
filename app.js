@@ -46,17 +46,25 @@ const fixtureDefaults = {
     'wednesday-club':  { label: 'Wednesday Club Session', dayOfWeek: 3 },
     'thursday-ladies': { label: 'Thursday Ladies Evening', dayOfWeek: 4 }
 };
-
 window.loadFixtureTemplates = async () => {
     const container = document.getElementById('fixtureTemplatesList');
     if (!container) return;
     container.innerHTML = '';
 
+    console.log('loadFixtureTemplates: auth.currentUser =', auth.currentUser?.uid);
+
     for (const [id, defaults] of Object.entries(fixtureDefaults)) {
-        const snap = await getDoc(doc(db, 'fixtureTemplates', id));
-        const t = snap.exists() ? snap.data() : {
-            dayOfWeek: defaults.dayOfWeek, time: '6pm-7pm', capacity: 8, daysBeforeOpen: 5, active: true
-        };
+        let t;
+        try {
+            const snap = await getDoc(doc(db, 'fixtureTemplates', id));
+            t = snap.exists() ? snap.data() : {
+                dayOfWeek: defaults.dayOfWeek, time: '6pm-7pm', capacity: 8, daysBeforeOpen: 5, active: true
+            };
+        } catch (error) {
+            console.error('Failed to load fixtureTemplates/' + id, error.code, error.message);
+            container.innerHTML += `<div class="pending-item">Error loading ${defaults.label}: ${error.code}</div>`;
+            continue;
+        }
 
         const div = document.createElement('div');
         div.className = 'pending-item';
