@@ -91,7 +91,6 @@
        <!-- Views will go here --><div id="gamesView" class="view">
     <div class="header">
         <h1>Upcoming Games</h1>
-        <button id="alertsToggleBtn" onclick="toggleAlerts()" class="btn-secondary">🔕 Alerts Off</button>
         <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
 
@@ -173,6 +172,16 @@
     </div>
 </div>
 
+<!-- ADD THE NEW FIXTURES VIEW HERE -->
+<div id="fixturesView" class="view" style="display:none;">
+    <div class="header">
+        <h1>Club Fixtures</h1>
+        <button onclick="loadFixtures()" class="btn-secondary">🔄 Refresh</button>
+    </div>
+    <div id="fixturesList"></div>
+</div>
+<!-- END NEW FIXTURES VIEW -->
+
        <div id="adminView" class="view" style="display:none;">
     <div class="header">
         <h1>Admin Panel</h1>
@@ -210,7 +219,8 @@
     </div>
     
     <!-- Existing Approved Players Section -->
-
+</div>  <!-- closes adminView -->
+</div>  <!-- closes appContainer -->
 
     <script type="module" src="app.js"></script>
     <script>
