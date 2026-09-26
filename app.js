@@ -30,7 +30,8 @@ const ratingNames = {
 const timeSlotStartHour = {
     '8am-9am': 8, '9am-10am': 9, '10am-11am': 10, '11am-12pm': 11,
     '12pm-1pm': 12, '1pm-2pm': 13, '2pm-3pm': 14, '3pm-4pm': 15,
-    '4pm-5pm': 16, '5pm-6pm': 17
+    '4pm-5pm': 16, '5pm-6pm': 17, '6pm-7pm': 18, '7pm-8pm': 19,
+    '8pm-9pm': 20, '9pm-10pm': 21
 };
 
 function getSessionStartDateTime(dateStr, timeStr) {
