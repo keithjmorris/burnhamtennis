@@ -43,43 +43,51 @@ function getSessionStartDateTime(dateStr, timeStr) {
 }
 
 const fixtureDefaults = {
-    'monday-deepdale': { label: 'Monday Evening (Deepdale invite)', dayOfWeek: 1 },
-    'wednesday-club':  { label: 'Wednesday Club Session', dayOfWeek: 3 },
-    'thursday-ladies': { label: 'Thursday Ladies Evening', dayOfWeek: 4 }
+    'tuesday-club':    { label: 'Tuesday Club Session', dayOfWeek: 2, time: '5pm-6pm', capacity: 8 },
+    'wednesday-club':  { label: "Men's Team Practice", dayOfWeek: 3, time: '6pm-8pm', capacity: 8 },
+    'thursday-ladies': { label: "Ladies' Team Practice", dayOfWeek: 4, time: '6pm-8pm', capacity: 8 }
 };
+function getMaxPlayers(game) {
+    if (game.capacity) return game.capacity;
+    return game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;
+}
+
+// Men can join the Thursday session from 9am the day before (Wednesday)
+function getMenOpenTime(dateStr) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() - 1);
+    d.setHours(9, 0, 0, 0);
+    return d;
+}
+
+function refreshVisibleList() {
+    const fx = document.getElementById('fixturesView');
+    if (fx && fx.style.display === 'block') loadFixtures();
+    else loadGames();
+}
 window.loadFixtureTemplates = async () => {
     const container = document.getElementById('fixtureTemplatesList');
     if (!container) return;
     container.innerHTML = '';
 
-    console.log('loadFixtureTemplates: auth.currentUser =', auth.currentUser?.uid);
-
     for (const [id, defaults] of Object.entries(fixtureDefaults)) {
-        let t;
+        let t = { dayOfWeek: defaults.dayOfWeek, capacity: defaults.capacity, daysBeforeOpen: 5, active: true };
         try {
             const snap = await getDoc(doc(db, 'fixtureTemplates', id));
-            t = snap.exists() ? snap.data() : {
-                dayOfWeek: defaults.dayOfWeek, time: '6pm-7pm', capacity: 8, daysBeforeOpen: 5, active: true
-            };
+            if (snap.exists()) t = { ...t, ...snap.data() };
         } catch (error) {
             console.error('Failed to load fixtureTemplates/' + id, error.code, error.message);
-            container.innerHTML += `<div class="pending-item">Error loading ${defaults.label}: ${error.code}</div>`;
-            continue;
         }
 
         const div = document.createElement('div');
         div.className = 'pending-item';
         div.innerHTML = `
             <div class="pending-name">${defaults.label}</div>
+            <div style="font-size:0.9em; color:#666; margin-bottom:6px;">Fixed time: ${defaults.time}</div>
             <label>Day of week:</label>
             <select id="fx-day-${id}">
                 ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d, i) =>
                     `<option value="${i}" ${t.dayOfWeek === i ? 'selected' : ''}>${d}</option>`).join('')}
-            </select>
-            <label>Time:</label>
-            <select id="fx-time-${id}">
-                ${Object.keys(timeSlotStartHour).map(slot =>
-                    `<option value="${slot}" ${t.time === slot ? 'selected' : ''}>${slot}</option>`).join('')}
             </select>
             <label>Capacity:</label>
             <input type="number" id="fx-cap-${id}" value="${t.capacity}" min="2" max="20">
@@ -99,7 +107,6 @@ window.saveFixtureTemplate = async (id) => {
     try {
         await setDoc(doc(db, 'fixtureTemplates', id), {
             dayOfWeek: parseInt(document.getElementById(`fx-day-${id}`).value),
-            time: document.getElementById(`fx-time-${id}`).value,
             capacity: parseInt(document.getElementById(`fx-cap-${id}`).value),
             daysBeforeOpen: parseInt(document.getElementById(`fx-days-${id}`).value),
             active: document.getElementById(`fx-active-${id}`).checked
@@ -621,27 +628,6 @@ window.loadFixtures = async () => {
     }
 };
 
-window.addGuest = async (gameId) => {
-    const nameInput = document.getElementById(`guestName-${gameId}`);
-    const name = nameInput.value.trim();
-    if (!name) {
-        alert('Please enter a guest name');
-        return;
-    }
-    try {
-        const guestData = {
-            uid: 'guest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
-            name: name + ' (Guest)',
-            isGuest: true
-        };
-        await updateDoc(doc(db, 'games', gameId), { players: arrayUnion(guestData) });
-        nameInput.value = '';
-        loadFixtures();
-    } catch (error) {
-        alert('Failed to add guest: ' + error.message);
-    }
-};
-
 window.showAdmin = () => {
     hideAllViews();
     document.getElementById('adminView').style.display = 'block';
@@ -828,7 +814,7 @@ async function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     
-    const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;
+    const maxPlayers = getMaxPlayers(game);
     const playerCount = game.players ? game.players.length : 0;
     const reserveCount = game.reserves ? game.reserves.length : 0;
     const isFull = playerCount >= maxPlayers;
@@ -836,6 +822,10 @@ async function createGameCard(game, isMyGames) {
     const userInPlayers = game.players?.some(p => p.uid === currentUserData?.uid);
     const userInReserves = game.reserves?.some(p => p.uid === currentUserData?.uid);
     const userInGame = userInPlayers || userInReserves;
+    const myReservePos = game.reserves ? game.reserves.findIndex(p => p.uid === currentUserData?.uid) + 1 : 0;
+const fixtureNote = (game.fixtureType === 'thursday-ladies')
+    ? `<div style="font-size:0.85em; color:#666; margin-top:4px;">Ladies only until 9am the day before, then open to men for any free places.</div>`
+    : '';
     
     let playersHTML = '';
     if (playerCount > 0) {
@@ -860,11 +850,11 @@ const playerLevel = (userData?.level || player.isGuest) ? '' : ` <span class="le
         reservesHTML += '</div>';
     }
     
-const gameTypeBadge = `<span class="game-type-badge">${
-    game.gameType === 'singles' ? 'Singles' : 
-    game.gameType === 'doubles' ? 'Doubles' : 
-    'Social Session'
-}</span>`;
+const badgeText = (game.fixtureType && fixtureDefaults[game.fixtureType])
+    ? fixtureDefaults[game.fixtureType].label
+    : (game.gameType === 'singles' ? 'Singles' : game.gameType === 'doubles' ? 'Doubles' : 'Social Session');
+const gameTypeBadge = `<span class="game-type-badge">${badgeText}</span>`;
+}
     const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${ratingNames[game.recommendedLevel]}</div>` : '';
     const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
 
@@ -875,14 +865,6 @@ const courtBookingButton = isOrganizer ?
         class="btn-court-booking">
         📅 Book Court
     </a>` : '';
-
-    // ADD guestAddBox RIGHT HERE
-const guestAddBox = (game.fixtureType === 'monday-deepdale')
-    ? `<div style="margin-top:10px;">
-            <input type="text" id="guestName-${game.id}" placeholder="Deepdale guest name" style="width:60%;">
-            <button onclick="addGuest('${game.id}')" class="btn-secondary">Add Guest</button>
-        </div>`
-    : '';
     
     // Comments section (only in My Games view, only for players/reserves)
 let commentsHTML = '';
@@ -900,8 +882,8 @@ if (isMyGames && userInGame) {
         </div>
         ${recommendedLevel}
         ${description}
+        ${fixtureNote}
         ${courtBookingButton}
-        ${guestAddBox}
         
         <div class="game-players">
             <strong>Players (${playerCount}/${maxPlayers}):</strong>
@@ -915,7 +897,7 @@ if (isMyGames && userInGame) {
                 : userInPlayers
                     ? '<span class="joined-badge">✓ Joined</span>'
                     : userInReserves
-                        ? '<span class="joined-badge">✓ On Reserve List</span>'
+                        ? '<span class="joined-badge">✓ Reserve #${myReservePos}</span>'
                         : `<button onclick="joinGame('${game.id}')" class="btn-primary">${isFull ? 'Join Reserve List' : 'Join Game'}</button>`
             }
         </div>
@@ -1155,47 +1137,44 @@ window.joinGame = async (gameId) => {
     try {
         const gameRef = doc(db, 'games', gameId);
         const gameSnap = await getDoc(gameRef);
-        
-        if (!gameSnap.exists()) {
-            alert('Game not found');
-            return;
-        }
-        
+        if (!gameSnap.exists()) { alert('Game not found'); return; }
         const game = gameSnap.data();
-        const maxPlayers = game.gameType === 'singles' ? 2 : game.gameType === 'doubles' ? 4 : 8;  // FIXED
+
+        const alreadyIn = [...(game.players || []), ...(game.reserves || [])]
+            .some(p => p.uid === currentUserData.uid);
+        if (alreadyIn) return;
+
+        if (game.fixtureType === 'thursday-ladies' && currentUserData?.gender !== 'female') {
+            const opens = getMenOpenTime(game.date);
+            if (new Date() < opens) {
+                const dayName = opens.toLocaleDateString('en-GB', { weekday: 'long' });
+                alert(`This session is for ladies only until 9am on ${dayName}. Men can then book any places still free.`);
+                return;
+            }
+        }
+
+        const maxPlayers = getMaxPlayers(game);
         const currentPlayers = game.players ? game.players.length : 0;
-        const isFull = currentPlayers >= maxPlayers;
-        
+        const reserveCount = game.reserves ? game.reserves.length : 0;
         const playerData = {
             uid: currentUserData.uid,
             name: `${currentUserData.firstName} ${currentUserData.lastName}`
         };
 
-        if (game.fixtureType === 'thursday-ladies') {
-    const isFemale = currentUserData?.gender === 'female';
-    if (!isFemale) {
-        const sessionStart = getSessionStartDateTime(game.date, game.time);
-        const hoursUntil = (sessionStart - new Date()) / (1000 * 60 * 60);
-        if (hoursUntil > 24) {
-            alert('This session is reserved for ladies until 24 hours before start. Please check back nearer the time.');
-            return;
-        }
-    }
-}
-        
-        if (isFull) {
-            await updateDoc(gameRef, {
-                reserves: arrayUnion(playerData)
-            });
-            alert('Added to reserve list!');
+        if (currentPlayers >= maxPlayers) {
+            const position = reserveCount + 1;
+            const message = reserveCount === 0
+                ? 'This session is full. Would you like to join as the first reserve?'
+                : `This session is full, and there ${reserveCount === 1 ? 'is 1 reserve' : 'are ' + reserveCount + ' reserves'} ahead of you. You would be reserve number ${position}. Join the reserve list?`;
+            if (!confirm(message)) return;
+            await updateDoc(gameRef, { reserves: arrayUnion(playerData) });
+            alert(`You are reserve number ${position}.`);
         } else {
-            await updateDoc(gameRef, {
-                players: arrayUnion(playerData)
-            });
-            alert('Joined game successfully!');
+            await updateDoc(gameRef, { players: arrayUnion(playerData) });
+            alert('Joined successfully!');
         }
-        
-        loadGames();
+
+        refreshVisibleList();
     } catch (error) {
         alert('Failed to join game: ' + error.message);
     }

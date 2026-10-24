@@ -50,25 +50,36 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
 
     await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
 });
+const FIXTURES = {
+    'tuesday-club':    { dayOfWeek: 2, time: '5pm-6pm', capacity: 8, daysBeforeOpen: 5 },
+    'wednesday-club':  { dayOfWeek: 3, time: '6pm-8pm', capacity: 8, daysBeforeOpen: 5 },
+    'thursday-ladies': { dayOfWeek: 4, time: '6pm-8pm', capacity: 8, daysBeforeOpen: 5 }
+};
 
 exports.generateWeeklyFixtures = onSchedule({ schedule: "0 6 * * *", timeZone: "Europe/London" }, async () => {
-    const templatesSnap = await db.collection("fixtureTemplates").get();
-
-    for (const templateDoc of templatesSnap.docs) {
-        const t = templateDoc.data();
+    for (const [id, defaults] of Object.entries(FIXTURES)) {
+        const snap = await db.collection("fixtureTemplates").doc(id).get();
+        const saved = snap.exists ? snap.data() : {};
+        const t = {
+            dayOfWeek: saved.dayOfWeek ?? defaults.dayOfWeek,
+            capacity: saved.capacity ?? defaults.capacity,
+            daysBeforeOpen: saved.daysBeforeOpen ?? defaults.daysBeforeOpen,
+            active: saved.active ?? true,
+            time: defaults.time
+        };
         if (!t.active) continue;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const daysUntilTarget = (t.dayOfWeek - today.getDay() + 7) % 7;
+        if (daysUntilTarget > t.daysBeforeOpen) continue;
+
         const occurrence = new Date(today);
         occurrence.setDate(today.getDate() + daysUntilTarget);
         const dateStr = occurrence.toISOString().split("T")[0];
 
-        if (daysUntilTarget > t.daysBeforeOpen) continue;
-
         const existing = await db.collection("games")
-            .where("fixtureType", "==", templateDoc.id)
+            .where("fixtureType", "==", id)
             .where("date", "==", dateStr)
             .get();
         if (!existing.empty) continue;
@@ -77,7 +88,8 @@ exports.generateWeeklyFixtures = onSchedule({ schedule: "0 6 * * *", timeZone: "
             gameType: "social",
             date: dateStr,
             time: t.time,
-            fixtureType: templateDoc.id,
+            capacity: t.capacity,
+            fixtureType: id,
             description: null,
             recommendedLevel: null,
             players: [],
