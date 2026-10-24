@@ -6,6 +6,17 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 initializeApp();
 const db = getFirestore();
+const FIXTURE_LABELS = {
+    'tuesday-club': 'Tuesday Club Session',
+    'wednesday-club': "Men's Team Practice",
+    'thursday-ladies': "Ladies' Team Practice"
+};
+
+function prettyDate(dateStr) {
+    return new Date(dateStr + "T12:00:00").toLocaleDateString("en-GB", {
+        weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London"
+    });
+}
 
 async function sendToUid(uid, title, body) {
     if (!uid) return;
@@ -45,11 +56,19 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
     const game = event.data.data();
     const uids = await getAlertableUids(game.createdBy);
 
-    const title = "New game arranged";
-    const body = `${game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session"} on ${game.date} at ${game.time}`;
+    let title, body;
+    if (game.fixtureType && FIXTURE_LABELS[game.fixtureType]) {
+        title = `${FIXTURE_LABELS[game.fixtureType]} - now open`;
+        body = `${prettyDate(game.date)}, ${game.time}. Sign up in the app.`;
+    } else {
+        const type = game.gameType === "singles" ? "Singles" : game.gameType === "doubles" ? "Doubles" : "Social Session";
+        title = "New game arranged";
+        body = `${type} on ${prettyDate(game.date)} at ${game.time}`;
+    }
 
     await Promise.all(uids.map(uid => sendToUid(uid, title, body)));
 });
+
 const FIXTURES = {
     'tuesday-club':    { dayOfWeek: 2, time: '5pm-6pm', capacity: 8, daysBeforeOpen: 5 },
     'wednesday-club':  { dayOfWeek: 3, time: '6pm-8pm', capacity: 8, daysBeforeOpen: 5 },
