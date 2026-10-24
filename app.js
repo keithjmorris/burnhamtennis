@@ -809,69 +809,73 @@ async function loadMyGames() {
         console.error('Error loading my games:', error);
     }
 }
-
 async function createGameCard(game, isMyGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
-    
+
     const maxPlayers = getMaxPlayers(game);
     const playerCount = game.players ? game.players.length : 0;
     const reserveCount = game.reserves ? game.reserves.length : 0;
     const isFull = playerCount >= maxPlayers;
-    
+
     const userInPlayers = game.players?.some(p => p.uid === currentUserData?.uid);
     const userInReserves = game.reserves?.some(p => p.uid === currentUserData?.uid);
     const userInGame = userInPlayers || userInReserves;
     const myReservePos = game.reserves ? game.reserves.findIndex(p => p.uid === currentUserData?.uid) + 1 : 0;
-const fixtureNote = (game.fixtureType === 'thursday-ladies')
-    ? `<div style="font-size:0.85em; color:#666; margin-top:4px;">Ladies only until 9am the day before, then open to men for any free places.</div>`
-    : '';
-    
+
+    const fixtureNote = (game.fixtureType === 'thursday-ladies')
+        ? `<div style="font-size:0.85em; color:#666; margin-top:4px;">Ladies only until 9am the day before, then open to men for any free places.</div>`
+        : '';
+
     let playersHTML = '';
     if (playerCount > 0) {
         playersHTML = '<div class="player-list">';
         game.players.forEach(player => {
             const userData = allUsers[player.uid];
             const playerName = userData ? `${userData.firstName} ${userData.lastName}` : player.name;
-const playerLevel = (userData?.level || player.isGuest) ? '' : ` <span class="level-badge">${levelNames[userData?.level]}</span>`;            playersHTML += `<div class="player-item-game">✓ ${playerName}${playerLevel}</div>`;
+            const playerLevel = userData?.rating ? ` <span class="level-badge">${ratingNames[userData.rating]}</span>` : '';
+            playersHTML += `<div class="player-item-game">✓ ${playerName}${playerLevel}</div>`;
         });
         playersHTML += '</div>';
     }
-    
+
     let reservesHTML = '';
     if (reserveCount > 0) {
         reservesHTML = '<div class="reserve-section"><div class="reserve-header">Reserve List:</div>';
         game.reserves.forEach((player, index) => {
             const userData = allUsers[player.uid];
             const playerName = userData ? `${userData.firstName} ${userData.lastName}` : player.name;
-            const playerLevel = userData?.level ? ` <span class="level-badge">${ratingNames[userData.rating]}</span>` : '';
+            const playerLevel = userData?.rating ? ` <span class="level-badge">${ratingNames[userData.rating]}</span>` : '';
             reservesHTML += `<div class="player-item-game">${index + 1}. ${playerName}${playerLevel}</div>`;
         });
         reservesHTML += '</div>';
     }
-    
-const badgeText = (game.fixtureType && fixtureDefaults[game.fixtureType])
-    ? fixtureDefaults[game.fixtureType].label
-    : (game.gameType === 'singles' ? 'Singles' : game.gameType === 'doubles' ? 'Doubles' : 'Social Session');
-const gameTypeBadge = `<span class="game-type-badge">${badgeText}</span>`;
-}
-    const recommendedLevel = game.recommendedLevel ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${ratingNames[game.recommendedLevel]}</div>` : '';
+
+    const badgeText = (game.fixtureType && fixtureDefaults[game.fixtureType])
+        ? fixtureDefaults[game.fixtureType].label
+        : (game.gameType === 'singles' ? 'Singles' : game.gameType === 'doubles' ? 'Doubles' : 'Social Session');
+    const gameTypeBadge = `<span class="game-type-badge">${badgeText}</span>`;
+
+    const recommendedLevel = game.recommendedLevel
+        ? `<div style="font-size: 0.85em; color: #666; margin-top: 4px;">Recommended: ${ratingNames[game.recommendedLevel]}</div>`
+        : '';
     const description = game.description ? `<div class="game-description">${game.description}</div>` : '';
 
     const isOrganizer = game.createdBy === currentUserData?.uid;
-const courtBookingButton = isOrganizer ? 
-    `<a href="https://clubspark.lta.org.uk/TheBurnhamsTennisClub/Booking/BookByDate#?date=${game.date}&role=guest" 
-        target="_blank" 
-        class="btn-court-booking">
-        📅 Book Court
-    </a>` : '';
-    
+    const courtBookingButton = isOrganizer
+        ? `<a href="https://clubspark.lta.org.uk/TheBurnhamsTennisClub/Booking/BookByDate#?date=${game.date}&role=guest"
+            target="_blank"
+            class="btn-court-booking">
+            📅 Book Court
+        </a>`
+        : '';
+
     // Comments section (only in My Games view, only for players/reserves)
-let commentsHTML = '';
-if (isMyGames && userInGame) {
-    commentsHTML = await createCommentsSection(game.id, game.comments || []);
-}
-    
+    let commentsHTML = '';
+    if (isMyGames && userInGame) {
+        commentsHTML = await createCommentsSection(game.id, game.comments || []);
+    }
+
     card.innerHTML = `
         <div class="game-header">
             <div>
@@ -884,7 +888,7 @@ if (isMyGames && userInGame) {
         ${description}
         ${fixtureNote}
         ${courtBookingButton}
-        
+
         <div class="game-players">
             <strong>Players (${playerCount}/${maxPlayers}):</strong>
             ${playerCount === 0 ? '<p style="color: #999; margin: 8px 0;">No players yet</p>' : playersHTML}
@@ -892,18 +896,18 @@ if (isMyGames && userInGame) {
         </div>
         ${reservesHTML}
         <div class="game-actions">
-            ${isMyGames 
+            ${isMyGames
                 ? `<button onclick="leaveGame('${game.id}')" class="btn-danger">Leave Game</button>`
                 : userInPlayers
                     ? '<span class="joined-badge">✓ Joined</span>'
                     : userInReserves
-                        ? '<span class="joined-badge">✓ Reserve #${myReservePos}</span>'
+                        ? `<span class="joined-badge">✓ Reserve #${myReservePos}</span>`
                         : `<button onclick="joinGame('${game.id}')" class="btn-primary">${isFull ? 'Join Reserve List' : 'Join Game'}</button>`
             }
         </div>
         ${commentsHTML}
     `;
-    
+
     return card;
 }
 
