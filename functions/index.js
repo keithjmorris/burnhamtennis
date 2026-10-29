@@ -90,33 +90,35 @@ exports.generateWeeklyFixtures = onSchedule({ schedule: "0 6 * * *", timeZone: "
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const daysUntilTarget = (t.dayOfWeek - today.getDay() + 7) % 7;
-        if (daysUntilTarget > t.daysBeforeOpen) continue;
 
-        const occurrence = new Date(today);
-        occurrence.setDate(today.getDate() + daysUntilTarget);
-        const dateStr = occurrence.toISOString().split("T")[0];
+        // Look 1..daysBeforeOpen days ahead for the matching weekday
+        for (let offset = 1; offset <= t.daysBeforeOpen; offset++) {
+            const occurrence = new Date(today);
+            occurrence.setDate(today.getDate() + offset);
+            if (occurrence.getDay() !== t.dayOfWeek) continue;
 
-        const existing = await db.collection("games")
-            .where("fixtureType", "==", id)
-            .where("date", "==", dateStr)
-            .get();
-        if (!existing.empty) continue;
+            const dateStr = occurrence.toISOString().split("T")[0];
+            const existing = await db.collection("games")
+                .where("fixtureType", "==", id)
+                .where("date", "==", dateStr)
+                .get();
+            if (!existing.empty) continue;
 
-        await db.collection("games").add({
-            gameType: "social",
-            date: dateStr,
-            time: t.time,
-            capacity: t.capacity,
-            fixtureType: id,
-            description: null,
-            recommendedLevel: null,
-            players: [],
-            reserves: [],
-            comments: [],
-            createdBy: null,
-            createdAt: new Date()
-        });
+            await db.collection("games").add({
+                gameType: "social",
+                date: dateStr,
+                time: t.time,
+                capacity: t.capacity,
+                fixtureType: id,
+                description: null,
+                recommendedLevel: null,
+                players: [],
+                reserves: [],
+                comments: [],
+                createdBy: null,
+                createdAt: new Date()
+            });
+        }
     }
 });
 
