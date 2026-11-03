@@ -295,6 +295,7 @@ window.completeProfile = async () => {
             firstName,
             lastName,
             rating,
+            gender,
             interests,
             approved: { games: false, social: false, tournaments: false },
             alertsEnabled: false,
@@ -354,6 +355,7 @@ function renderMemberCard(member, phone, prefix) {
                     ).join('')}
                 </select>
                 <select id="editGender-${prefix}-${member.id}">
+                <option value="" ${!member.gender ? 'selected' : ''}>Not set</option>
     <option value="female" ${member.gender === 'female' ? 'selected' : ''}>Female</option>
     <option value="male" ${member.gender === 'male' ? 'selected' : ''}>Male</option>
     <option value="prefer-not-to-say" ${member.gender === 'prefer-not-to-say' ? 'selected' : ''}>Prefer not to say</option>
@@ -1150,14 +1152,18 @@ window.joinGame = async (gameId) => {
             .some(p => p.uid === currentUserData.uid);
         if (alreadyIn) return;
 
-        if (game.fixtureType === 'thursday-ladies' && currentUserData?.gender !== 'female') {
-            const opens = getMenOpenTime(game.date);
-            if (new Date() < opens) {
-                const dayName = opens.toLocaleDateString('en-GB', { weekday: 'long' });
-                alert(`This session is for ladies only until 9am on ${dayName}. Men can then book any places still free.`);
-                return;
-            }
+        if (game.fixtureType === 'thursday-ladies') {
+    const memberSnap = await getDoc(doc(db, 'members', currentUser.uid));
+    const gender = String(memberSnap.data()?.gender || '').trim().toLowerCase();
+    if (gender !== 'female') {
+        const opens = getMenOpenTime(game.date);
+        if (new Date() < opens) {
+            const dayName = opens.toLocaleDateString('en-GB', { weekday: 'long' });
+            alert(`This session is for ladies only until 9am on ${dayName}. Men can then book any places still free.\n\n(Your profile gender is: ${gender || 'not set'})`);
+            return;
         }
+    }
+}
 
         const maxPlayers = getMaxPlayers(game);
         const currentPlayers = game.players ? game.players.length : 0;
