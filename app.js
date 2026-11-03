@@ -390,15 +390,17 @@ window.saveMemberEdits = async (memberId, prefix) => {
         const firstName = document.getElementById(`editFirstName-${prefix}-${memberId}`).value.trim();
         const lastName = document.getElementById(`editLastName-${prefix}-${memberId}`).value.trim();
         const rating = parseInt(document.getElementById(`editRating-${prefix}-${memberId}`).value);
-        const gender = document.getElementById(`editGender-${prefix}-${memberId}`).value;
-await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, gender, interests });
+        const gender = document.getElementById(`editGender-${prefix}-${memberId}`)?.value || '';
         const interests = {
             games: document.getElementById(`editGames-${prefix}-${memberId}`).checked,
             social: document.getElementById(`editSocial-${prefix}-${memberId}`).checked,
             tournaments: document.getElementById(`editTournaments-${prefix}-${memberId}`).checked
         };
 
-        await updateDoc(doc(db, 'members', memberId), { firstName, lastName, rating, gender, interests });
+        const updates = { firstName, lastName, rating, interests };
+        if (gender) updates.gender = gender;   // "Not set" leaves any existing gender alone
+
+        await updateDoc(doc(db, 'members', memberId), updates);
 
         alert('Changes saved');
         loadPendingApprovals();
