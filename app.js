@@ -234,6 +234,7 @@ window.sendVerificationCode = async () => {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
 
         confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        document.getElementById('codeSentNote').textContent = 'We have texted a 6-digit code to ' + phone + '. It can take up to a minute to arrive. Only the most recent code works.';
         document.getElementById('phoneEntryForm').style.display = 'none';
         document.getElementById('codeEntryForm').style.display = 'block';
     } catch (error) {
@@ -261,7 +262,14 @@ window.verifyCode = async () => {
     try {
         await confirmationResult.confirm(code);
     } catch (error) {
-        alert('Incorrect code, please try again.');
+        console.error('verifyCode failed:', error.code, error.message);
+        if (error.code === 'auth/invalid-verification-code') {
+            alert('That code is not correct. If you asked for more than one code, use the most recent one.');
+        } else if (error.code === 'auth/code-expired') {
+            alert('That code has expired. Please go back and ask for a new one.');
+        } else {
+            alert('Could not verify the code (' + (error.code || error.message) + '). Please go back and try again.');
+        }
         document.getElementById('verificationCode').value = '';
     } finally {
         btn.disabled = false;

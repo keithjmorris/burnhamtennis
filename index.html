@@ -22,12 +22,12 @@
 <button id="sendCodeBtn" onclick="sendVerificationCode()" class="btn-primary">Send Code</button>        </div>
 
         <div id="codeEntryForm" style="display:none;">
-            <h2>Enter Code</h2>
-            <p style="font-size:0.9em;color:#666;">We've texted you a 6-digit code.</p>
-            <input type="text" id="verificationCode" placeholder="123456" maxlength="6">
-<button id="verifyCodeBtn" onclick="verifyCode()" class="btn-primary">Verify</button>
-            <p class="link" onclick="showPhoneEntry()">Back</p>
-        </div>
+    <h2>Enter Code</h2>
+    <p id="codeSentNote" style="font-size:0.9em;color:#666;">We've texted you a 6-digit code.</p>
+    <input type="text" id="verificationCode" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+    <button id="verifyCodeBtn" onclick="verifyCode()" class="btn-primary">Verify</button>
+    <p class="link" onclick="showPhoneEntry()">Back</p>
+</div>
 
         <div id="profileForm" style="display:none;">
     <h2>Your Details</h2>
