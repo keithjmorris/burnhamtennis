@@ -703,24 +703,35 @@ async function loadGames() {
 let detectedPlatform = null;
 
 function checkInstallBanner() {
-    const isStandalone = window.navigator.standalone === true 
+    const isStandalone = window.navigator.standalone === true
         || window.matchMedia('(display-mode: standalone)').matches;
-    
-    if (isStandalone) return;
-    if (localStorage.getItem('installBannerDismissed')) return;
-    
+    if (isStandalone) return;   // already installed, nothing to show
+
     const ua = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(ua);
     const isAndroid = /Android/.test(ua);
-    
+
     if (isIOS) {
         detectedPlatform = 'ios';
     } else if (isAndroid) {
         detectedPlatform = 'android';
     } else {
-        return; // desktop - nothing to show
+        return;   // desktop - nothing to show
     }
-    
+
+    // First visit: open the full instructions automatically
+    let promptShown = false;
+    try { promptShown = localStorage.getItem('installPromptShown') === 'true'; } catch (e) {}
+    if (!promptShown) {
+        try { localStorage.setItem('installPromptShown', 'true'); } catch (e) {}
+        showInstallInstructions();
+    }
+
+    // Small reminder banner stays until they tap "Got it"
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('installBannerDismissed') === 'true'; } catch (e) {}
+    if (dismissed) return;
+
     document.getElementById('installBannerText').textContent = '📱 Tap here to set up the app on your phone (and enable alerts)';
     document.getElementById('installBanner').style.display = 'block';
 }
@@ -731,22 +742,24 @@ window.dismissInstallBanner = () => {
 };
 
 window.showInstallInstructions = () => {
+    if (document.getElementById('installModal')) return;   // already open
+
     const steps = detectedPlatform === 'ios'
         ? `
-            <ol style="text-align:left; line-height:1.8;">
-                <li>Tap the <strong>Share</strong> icon (square with an arrow) at the bottom of Safari</li>
-                <li>Scroll down and tap <strong>"Add to Home Screen"</strong>, then <strong>Add</strong></li>
-                <li>Close Safari, and open the app using the new icon on your Home Screen</li>
-                <li>Go to the <strong>Games</strong> tab and tap the <strong>Alerts</strong> button, then allow notifications</li>
+            <ol style="text-align:left; line-height:1.8; padding-left:20px;">
+                <li>Tap the <strong>three dots (…)</strong> to the right of the address bar. On older iPhones, tap the <strong>Share</strong> icon (a square with an arrow) instead.</li>
+                <li>Tap <strong>Share</strong> or <strong>Save</strong>, then scroll down and tap <strong>"Add to Home Screen"</strong>, then <strong>Add</strong>.</li>
+                <li>Close Safari and open the app from its new icon on your Home Screen.</li>
+                <li>Go to the <strong>Games</strong> tab and tap <strong>Alerts</strong> to switch on notifications.</li>
             </ol>
-            <p style="font-size:0.85em; color:#666;">Note: alerts only work when opened from the Home Screen icon, not from a normal Safari tab - this is an Apple restriction.</p>
+            <p style="font-size:0.85em; color:#666;">If you opened this link from WhatsApp or another app, open <strong>burnhamtennis.vercel.app</strong> in Safari first. Alerts only work from the Home Screen icon, which is an Apple restriction.</p>
         `
         : `
-            <ol style="text-align:left; line-height:1.8;">
-                <li>Tap the menu (three dots, top right) in Chrome</li>
-                <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
-                <li>Open the app from the new icon</li>
-                <li>Go to the <strong>Games</strong> tab and tap the <strong>Alerts</strong> button, then allow notifications</li>
+            <ol style="text-align:left; line-height:1.8; padding-left:20px;">
+                <li>Tap the <strong>three dots (⋮)</strong> at the top right of Chrome.</li>
+                <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>, then confirm.</li>
+                <li>Open the app from its new icon.</li>
+                <li>Go to the <strong>Games</strong> tab and tap <strong>Alerts</strong> to switch on notifications.</li>
             </ol>
         `;
 
@@ -757,10 +770,11 @@ window.showInstallInstructions = () => {
 
     const modal = document.createElement('div');
     modal.id = 'installModal';
-    modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:24px; border-radius:12px; max-width:400px; width:85%; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+    modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:24px; border-radius:12px; max-width:400px; width:85%; max-height:85vh; overflow-y:auto; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
     modal.onclick = (e) => e.stopPropagation();
     modal.innerHTML = `
-        <h2 style="margin-top:0; color:#2196f3;">Set Up the App</h2>
+        <h2 style="margin-top:0; color:#2196f3;">Add to your Home Screen</h2>
+        <p style="font-size:0.9em; color:#555;">For the best experience, and to get alerts, add this app to your phone's Home Screen.</p>
         ${steps}
         <button onclick="closeInstallInstructions()" class="btn-primary" style="width:100%; margin-top:10px;">Close</button>
     `;
@@ -774,7 +788,6 @@ window.closeInstallInstructions = () => {
     const modal = document.getElementById('installModal');
     if (overlay) overlay.remove();
     if (modal) modal.remove();
-    dismissInstallBanner();
 };
 
 async function loadMyGames() {
