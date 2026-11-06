@@ -71,7 +71,7 @@ exports.onGameCreated = onDocumentCreated("games/{gameId}", async (event) => {
 
 const FIXTURES = {
     'tuesday-club':    { dayOfWeek: 2, time: '5pm-6pm', capacity: 8, daysBeforeOpen: 5 },
-    'wednesday-club':  { dayOfWeek: 3, time: '6pm-8pm', capacity: 8, daysBeforeOpen: 5 },
+    'wednesday-club':  { dayOfWeek: 3, time: '6.30pm-8.30pm', capacity: 8, daysBeforeOpen: 5 },
     'thursday-ladies': { dayOfWeek: 4, time: '6pm-8pm', capacity: 8, daysBeforeOpen: 5 }
 };
 
