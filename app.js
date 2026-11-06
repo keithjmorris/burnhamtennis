@@ -44,7 +44,7 @@ function getSessionStartDateTime(dateStr, timeStr) {
 
 const fixtureDefaults = {
     'tuesday-club':    { label: 'Tuesday Club Session', dayOfWeek: 2, time: '5pm-6pm', capacity: 8 },
-    'wednesday-club':  { label: "Men's Team Practice", dayOfWeek: 3, time: '6pm-8pm', capacity: 8 },
+    'wednesday-club':  { label: "Men's Team Practice", dayOfWeek: 3, time: '6.30pm-8.30pm', capacity: 8 },
     'thursday-ladies': { label: "Ladies' Team Practice", dayOfWeek: 4, time: '6pm-8pm', capacity: 8 }
 };
 function getMaxPlayers(game) {
