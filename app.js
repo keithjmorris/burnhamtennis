@@ -619,12 +619,15 @@ window.loadFixtures = async () => {
         if (!fixturesList) return;
         fixturesList.innerHTML = '';
 
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
         const fixtures = [];
         gamesSnapshot.forEach((gameDoc) => {
             const game = { id: gameDoc.id, ...gameDoc.data() };
-            if (game.fixtureType) fixtures.push(game);
+            if (game.fixtureType && game.date >= todayStr) fixtures.push(game);
         });
-        fixtures.sort((a, b) => new Date(a.date) - new Date(b.date));
+        fixtures.sort((a, b) => a.date.localeCompare(b.date));
 
         if (fixtures.length === 0) {
             fixturesList.innerHTML = '<p class="empty-state">No fixtures open for sign-up yet</p>';
@@ -639,7 +642,6 @@ window.loadFixtures = async () => {
         console.error('Error loading fixtures:', error);
     }
 };
-
 window.showAdmin = () => {
     hideAllViews();
     document.getElementById('adminView').style.display = 'block';
