@@ -559,7 +559,7 @@ function showPendingOrApp() {
     }
 }
 
-onAuthStateChanged(auth, async (user) => {
+async function handleAuthChange(user) {
     if (user) {
         currentUser = user;
         await loadUserData();
@@ -580,7 +580,22 @@ onAuthStateChanged(auth, async (user) => {
         allUsers = {};
         showAuth();
     }
+}
+function hideLoadingScreen() {
+    const el = document.getElementById('loadingScreen');
+    if (el) el.style.display = 'none';
+}
+
+onAuthStateChanged(auth, async (user) => {
+    try {
+        await handleAuthChange(user);
+    } finally {
+        hideLoadingScreen();
+    }
 });
+
+// Safety net: never leave someone stuck on "Loading..." if the connection fails
+setTimeout(hideLoadingScreen, 10000);
 
 window.showGames = () => {
     hideAllViews();
