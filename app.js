@@ -994,29 +994,28 @@ function formatCommentTime(timestamp) {
 window.postComment = async (gameId) => {
     const input = document.getElementById(`commentInput-${gameId}`);
     const text = input.value.trim();
-    
+
     if (!text) {
         alert('Please enter a comment');
         return;
     }
-    
+
     try {
         const gameRef = doc(db, 'games', gameId);
-        
+
         const comment = {
             uid: currentUserData.uid,
             authorName: `${currentUserData.firstName} ${currentUserData.lastName}`,
             text,
-            timestamp: serverTimestamp()
+            timestamp: { seconds: Math.floor(Date.now() / 1000) }
         };
-        
+
         await updateDoc(gameRef, {
             comments: arrayUnion(comment)
         });
-        
+
         input.value = '';
-        
-        // Reload the appropriate view
+
         const myGamesView = document.getElementById('myGamesView');
         if (myGamesView && myGamesView.style.display !== 'none') {
             loadMyGames();
