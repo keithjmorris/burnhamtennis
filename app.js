@@ -216,6 +216,18 @@ window.showPhoneEntry = () => {
     document.getElementById('codeEntryForm').style.display = 'none';
     document.getElementById('profileForm').style.display = 'none';
 };
+
+function resetRecaptcha() {
+    try { if (window.recaptchaVerifier) window.recaptchaVerifier.clear(); } catch (e) {}
+    window.recaptchaVerifier = null;
+    const old = document.getElementById('recaptcha-container');
+    if (old) {
+        const fresh = document.createElement('div');
+        fresh.id = 'recaptcha-container';
+        old.replaceWith(fresh);
+    }
+}
+
 window.sendVerificationCode = async () => {
     const rawPhone = document.getElementById('phoneNumber').value.trim();
     if (!rawPhone) {
@@ -228,9 +240,7 @@ window.sendVerificationCode = async () => {
     btn.textContent = 'Sending...';
 
     try {
-        if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.clear();
-        }
+        resetRecaptcha();
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
 
         confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
@@ -238,11 +248,9 @@ window.sendVerificationCode = async () => {
         document.getElementById('phoneEntryForm').style.display = 'none';
         document.getElementById('codeEntryForm').style.display = 'block';
     } catch (error) {
-        alert('Failed to send code: ' + error.message);
-        if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.clear();
-            window.recaptchaVerifier = null;
-        }
+        console.error('sendVerificationCode failed:', error.code, error.message);
+        resetRecaptcha();
+        alert('Could not send the code (' + (error.code || error.message) + '). Please wait a moment and try once more. If it keeps failing, close the app completely and reopen it.');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Send Code';
