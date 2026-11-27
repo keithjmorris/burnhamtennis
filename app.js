@@ -1433,3 +1433,8 @@ onAuthStateChanged(auth, async (user) => {
   } catch (e) { console.error("Teams admin check failed", e); }
   initTeams({ db, auth, isAdmin: () => adminFlag });
 });
+
+// Load the Teams admin section whenever the Admin tab is opened
+document.getElementById("navAdmin")?.addEventListener("click", () => {
+  loadTeamsAdmin().catch(e => console.error("Teams admin failed", e));
+});
