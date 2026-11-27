@@ -86,8 +86,11 @@
                 <span>➕</span><span>Arrange</span>
             </button>
             <button onclick="showFixtures()" id="navFixtures">
-    <span>📅</span><span>Fixtures</span>
-</button>
+                <span>📅</span><span>Fixtures</span>
+            </button>
+            <button onclick="showTeams()" id="navTeams">
+                <span>➕</span><span>Teams</span>
+            </button>
             <button onclick="showAdmin()" id="navAdmin" style="display:none;">
                 <span>⚙️</span><span>Admin</span>
             </button>
@@ -188,6 +191,11 @@
         <button onclick="loadFixtures()" class="btn-secondary">🔄 Refresh</button>
     </div>
     <div id="fixturesList"></div>
+</div>
+
+<div id="teamsView" class="view" style="display:none">
+  <h2>Teams</h2>
+  <div id="teamsContent"></div>
 </div>
 <!-- END NEW FIXTURES VIEW -->
 

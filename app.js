@@ -3,6 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, doc, query, where, deleteDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js';
+import { initTeams, loadTeamsAdmin } from "./teams.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBPDxnd2nGvxHC5Aig3ZeeFlpmOzP6E9Nk",
@@ -422,6 +423,7 @@ window.saveMemberEdits = async (memberId, prefix) => {
 
         alert('Changes saved');
         loadPendingApprovals();
+        loadTeamsAdmin();
         loadAllMembers();
     } catch (error) {
         alert('Failed to save changes: ' + error.message);
@@ -1418,3 +1420,16 @@ window.deleteMessage = async (messageId) => {
     }
 };
 
+// ---- Teams feature ----
+let teamsStarted = false;
+onAuthStateChanged(auth, async (user) => {
+  if (!user || teamsStarted) return;
+  teamsStarted = true;
+  let adminFlag = false;
+  try {
+    const snap = await getDocs(collection(db, "admins"));
+    const mine = user.phoneNumber;
+    adminFlag = snap.docs.some(d => d.data().phone === mine);
+  } catch (e) { console.error("Teams admin check failed", e); }
+  initTeams({ db, auth, isAdmin: () => adminFlag });
+});
